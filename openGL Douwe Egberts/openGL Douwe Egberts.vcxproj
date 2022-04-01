@@ -128,15 +128,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="camera.cpp" />
+    <ClCompile Include="droneCamera.cpp" />
     <ClCompile Include="glsl.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="objloader.cpp" />
     <ClCompile Include="texture.cpp" />
+    <ClCompile Include="walkCamera.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera.h" />
+    <ClInclude Include="droneCamera.h" />
     <ClInclude Include="glsl.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="objloader.h" />
     <ClInclude Include="texture.h" />
+    <ClInclude Include="walkCamera.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fragmentshader.fsh" />

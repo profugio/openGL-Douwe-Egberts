@@ -7,9 +7,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+
 #include "glsl.h"
 #include "objloader.h"
 #include "texture.h"
+#include "walkCamera.h"
+#include "droneCamera.h"
 
 using namespace std;
 
@@ -24,6 +27,8 @@ const unsigned int objectCount = 4;
 const char* fragshader_name = "fragmentshader.fsh";
 const char* vertexshader_name = "vertexshader.vsh";
 
+static const int DRONE_CAMERA = 1;
+static const int WALK_CAMERA = 0;
 
 //Time
 unsigned const int DELTA_TIME = 1;
@@ -31,27 +36,30 @@ unsigned int timeSinceStart = 0;
 unsigned int oldTimeSinceStart;
 unsigned int deltaTime;
 
+
+//Instead well have an vector  with all objects vector<Model> models;
 vector<glm::vec3> normals[objectCount];
 vector<glm::vec3> vertices[objectCount];
 vector<glm::vec2> uvs[objectCount];
 
+Camera* cameras[2];
+int activeCamera;
 
-//Camera values
+//Camera values (moved to camera class
 glm::vec3 cameraPos;
 glm::vec3 cameraFront;
 glm::vec3 cameraUp;
 glm::vec3 cameraTarget;
 glm::vec3 cameraDirection;
 
-//Yaw/Pitch
 float yaw = -90.0f;
 float pitch = 0.0f;
 
 //Input buffer
 bool keyBuffer[128];
 
-glm::vec3 light_position, ambient_color, diffuse_color, specular;
-float power;
+
+
 
 
 
@@ -65,6 +73,8 @@ float power;
 // ID's
 GLuint program_id;
 GLuint vao[objectCount];
+
+//Moved to model class
 GLuint texture_id[objectCount];
 
 // Uniform ID's
@@ -77,7 +87,7 @@ GLuint uniform_specular;
 GLuint uniform_material_power;
 
 
-// Matrices
+// Matrices will move to Model/camera class;
 glm::mat4 model[objectCount], view, projection;
 glm::mat4 mv[objectCount];
 
@@ -85,6 +95,7 @@ struct LightSource {
     glm::vec3 position;
 };
 
+//Moved to model class;
 struct Material {
     glm::vec3 ambient_color;
     glm::vec3 diffuse_color;
@@ -97,11 +108,12 @@ LightSource light;
 
 
 
-void CalculateCameraDirection() {
-    cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraDirection.y = sin(glm::radians(pitch));
-    cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(cameraDirection);
+
+
+void InitCameras() {
+    cameras[0] = new WalkCamera();
+    cameras[1] = new DroneCamera();
+    activeCamera = 0;
 }
 
 
@@ -109,50 +121,49 @@ void CalculateCameraDirection() {
 // Keyboard handling
 //--------------------------------------------------------------------------------
 
-void keyboardHandler(unsigned char key, int a, int b)
-{
-    keyBuffer[key] = true;
+void clearKeyBuffer() {
+    for (int i = 0; i < sizeof(keyBuffer) / sizeof(bool); i++) {
+        keyBuffer[i] = false;
+    }
+}
 
+void keyboardHandler(unsigned char key, int a, int b){
+    if(keyBuffer[key] == false) {
+        keyBuffer[key] = true;
+    }
 }
 
 void keyboardUpHandler(unsigned char key, int a, int b) {
-    keyBuffer[key] = false;
+    if (key == 'v') {
+        if (activeCamera == WALK_CAMERA) {
+           
+            delete cameras[DRONE_CAMERA];
+            cameras[DRONE_CAMERA] = new DroneCamera();
+            activeCamera = DRONE_CAMERA;
+            clearKeyBuffer();
+        }
+        else {
+            activeCamera = WALK_CAMERA;
+        }
+    }
+    else if (keyBuffer[key] == true) {
+        keyBuffer[key] = false;
+    }
+   
 }
 
+
+
+
+
+//If keyboard input is for the camera send to camera
 void doKeyboardInput(int key, int deltaTime) {
-    float cameraSpeed = 0.05f * deltaTime;
-    if (key == 27)
+    vector<char> cameraInputs{ 'w', 's', 'a', 'd', 'q', 'e', 'i', 'j', 'k', 'l'};
+    if (std::find(cameraInputs.begin(), cameraInputs.end(), key)!= cameraInputs.end()) {
+        (cameras[activeCamera])->Move(key, deltaTime);
+    }
+    else if (key == 27) {
         glutExit();
-    if (key == 119) { // w
-        cameraPos += cameraSpeed * cameraFront;
-    }
-    if (key == 115) { //s
-        cameraPos -= cameraSpeed * cameraFront;
-    }
-    if (key == 97) { //a
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    }
-    if (key == 100) { //d
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    }
-    if (key == 113) {//q
-        cameraPos -= cameraSpeed * cameraUp;
-    }
-    if (key == 101) {//e
-        cameraPos += cameraSpeed * cameraUp;
-    }
-    if (key == 105) {  //i
-        pitch += 0.1f * deltaTime;
-        CalculateCameraDirection();
-    }if (key == 106) { //j
-        yaw -= 0.1f * deltaTime;
-        CalculateCameraDirection();
-    }if (key == 107) { //k
-        pitch -= 0.1f * deltaTime;
-        CalculateCameraDirection();
-    }if (key == 108) { //l
-        yaw += 0.1f * deltaTime;
-        CalculateCameraDirection();
     }
 }
 
@@ -188,25 +199,22 @@ void Render()
             doKeyboardInput(i, deltaTime);
         }
     }
-    //Background color
-   /* static const GLfloat blue[] = { 1.0, 0.0, 0.4, 1.0 };
-    glClearBufferfv(GL_COLOR, 0, blue);*/
-    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
 
     // Do transformation
     model[0] = glm::rotate(model[0], 0.01f, glm::vec3(1.0f, 1.0f, 0.0f));
    
     model[1] = glm::rotate(model[1], 0.01f, glm::vec3(1.0f, 1.0f, 0.0f));
     model[2] = glm::rotate(model[2], 0.005f, glm::vec3(0.0f, 1.0f, 0.0f));
-    //model[4] = glm::translate(model[4], glm::vec3(0.0f, 0.0f, -0.01f));
+
     
-    //view = glm::translate(view, glm::vec3(0.0f, 0.01f, 0.0f));
-    //Camera
+
+
     // Attach to program_id
     glUseProgram(program_id);
 
     for (int i = 0; i < objectCount; i++) {
-        mv[i] = view * model[i];
+        mv[i] = cameras[activeCamera]->view * model[i];
 
         // Send mv
         glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(mv[i]));
@@ -216,6 +224,7 @@ void Render()
 
         //Fill uniform vars for material
         glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(mv[i]));
+        glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
         glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(materials[i].ambient_color));
         glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(materials[i].diffuse_color));
         glUniform3fv(uniform_specular, 1, glm::value_ptr(materials[i].specular));
@@ -226,7 +235,6 @@ void Render()
         glDrawArrays(GL_TRIANGLES, 0, vertices[i].size());
         glBindVertexArray(0);
    }
-
 
 
    
@@ -274,9 +282,6 @@ void InitLoadObjects() {
         bool res = loadOBJ(objects[i], vertices[i], uvs[i], normals[i]);
         texture_id[i] = loadBMP(textures[i]);
     }
- 
-    //bool res = loadOBJ(objects[2], vertices[2], uvs[2], normals[2]);
-
 }
 
 
@@ -313,29 +318,33 @@ void InitMatrices()
     //model[4] = glm::translate(glm::mat4(), glm::vec3(0.0, 4.0, 0.0));
     //model[4] = glm::rotate(model[4], glm::radians(90.0f), glm::vec3(0.0,1.0,0.0));
 
-    cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-    
+    //cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    //
    
-    cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-    //cameraDirection = glm::normalize(cameraPos - cameraTarget);
-    cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraDirection.y = sin(glm::radians(pitch));
-    cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-    cameraUp = glm::cross(cameraDirection, cameraRight);
-    cameraFront = glm::normalize(cameraDirection);
+    //cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    ////cameraDirection = glm::normalize(cameraPos - cameraTarget);
+    //cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    //cameraDirection.y = sin(glm::radians(pitch));
+    //cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    //glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    //glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+    //cameraUp = glm::cross(cameraDirection, cameraRight);
+    //cameraFront = glm::normalize(cameraDirection);
+    //for (int i = 0; i < objectCount; i++) {
+    //    
+    //    view = glm::lookAt(
+    //        glm::vec3(cameraPos),  // eye
+    //        glm::vec3(cameraFront),  // center
+    //        glm::vec3(cameraUp));  // up
+    //    projection = glm::perspective(
+    //        glm::radians(45.0f),
+    //        1.0f * WIDTH / HEIGHT, 0.1f,
+    //        1000.0f);
+    //    mv[i] =  view * model[i];
+    //}
+
     for (int i = 0; i < objectCount; i++) {
-        
-        view = glm::lookAt(
-            glm::vec3(cameraPos),  // eye
-            glm::vec3(cameraFront),  // center
-            glm::vec3(cameraUp));  // up
-        projection = glm::perspective(
-            glm::radians(45.0f),
-            1.0f * WIDTH / HEIGHT, 0.1f,
-            1000.0f);
-        mv[i] =  view * model[i];
+        mv[i] = cameras[activeCamera]->view * model[i];
     }
    
 }
@@ -417,27 +426,6 @@ void InitBuffers()
         glBindVertexArray(0);
     }
 
-    //// vbo for vertices
-    //glGenBuffers(1, &vbo_vertices);
-    //glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-    //glBufferData(GL_ARRAY_BUFFER,
-    //    vertices[2].size() * sizeof(glm::vec3), &vertices[2][0],
-    //    GL_STATIC_DRAW);
-
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    //// Allocate memory for vao
-    //glGenVertexArrays(1, &vao[2]);
-
-    //// Bind to vao
-    //glBindVertexArray(vao[2]);
-    //
-    //// Bind vertices to vao
-    //glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-    //glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    //glEnableVertexAttribArray(position_id);
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 
     glUseProgram(program_id);
 
@@ -458,7 +446,7 @@ void InitBuffers()
     
     //Fill uniform vars
     glUniform3fv(uniform_light_pos, 1, glm::value_ptr(light.position));
-    glUniformMatrix4fv(uniform_proj, 1,GL_FALSE, glm::value_ptr(projection));
+    //glUniformMatrix4fv(uniform_proj, 1,GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
     
 }
 
@@ -472,6 +460,7 @@ int main(int argc, char** argv)
     InitGlutGlew(argc, argv);
     InitLight();
     InitShaders();
+    InitCameras();
     InitMatrices();
     InitLoadObjects();
     InitBuffers();
