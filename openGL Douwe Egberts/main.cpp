@@ -85,8 +85,43 @@ GLuint uniform_material_ambient;
 GLuint uniform_material_diffuse;
 GLuint uniform_specular;
 GLuint uniform_material_power;
+GLuint uniform_isPrimitive;
 
 
+glm::mat4 primitive_model;
+glm::mat4 primitive_mv;
+GLuint primitive_vao;
+GLfloat primitive_vertices[] = {
+    // front
+    -1.0, -1.0, 1.0,
+    1.0, -1.0, 1.0,
+    1.0, 1.0, 1.0,
+    -1.0, 1.0, 1.0,
+    // back
+    -1.0, -1.0, 0.5,
+    1.0, -1.0, 0.5,
+    1.0, 1.0, 0.5,
+    -1.0, 1.0, 0.5
+};
+
+GLfloat primitive_colors[] = {
+    // front colors
+    1.0, 1.0, 0.0,
+    0.0, 1.0, 0.0,
+    0.0, 0.0, 1.0,
+    1.0, 1.0, 1.0,
+    // back colors
+    0.0, 1.0, 1.0,
+    1.0, 0.0, 1.0,
+    1.0, 0.0, 0.0,
+    1.0, 1.0, 0.0
+};
+
+GLushort cube_elements[] = {
+    0,1,1,2,2,3,3,0,  // front
+    0,4,1,5,3,7,2,6,  // front to back
+    4,5,5,6,6,7,7,4   //back
+};
 // Matrices will move to Model/camera class;
 glm::mat4 model[objectCount], view, projection;
 glm::mat4 mv[objectCount];
@@ -213,6 +248,22 @@ void Render()
     // Attach to program_id
     glUseProgram(program_id);
 
+    primitive_mv = cameras[activeCamera]->view * primitive_model;
+
+    glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(primitive_mv));
+    glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
+    glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(materials[0].ambient_color));
+    glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(materials[0].diffuse_color));
+    glUniform3fv(uniform_specular, 1, glm::value_ptr(materials[0].specular));
+    glUniform1f(uniform_material_power, materials[0].power);
+    glUniform1i(uniform_isPrimitive, true);
+    // Send vao
+    glBindVertexArray(primitive_vao);
+    //glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_LINES, sizeof(cube_elements) / sizeof(GLushort),
+        GL_UNSIGNED_SHORT, 0);
+    glBindVertexArray(0);
+
     for (int i = 0; i < objectCount; i++) {
         mv[i] = cameras[activeCamera]->view * model[i];
 
@@ -229,7 +280,7 @@ void Render()
         glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(materials[i].diffuse_color));
         glUniform3fv(uniform_specular, 1, glm::value_ptr(materials[i].specular));
         glUniform1f(uniform_material_power, materials[i].power);
-
+        glUniform1i(uniform_isPrimitive, false);
         // Send vao
         glBindVertexArray(vao[i]);
         glDrawArrays(GL_TRIANGLES, 0, vertices[i].size());
@@ -237,7 +288,6 @@ void Render()
    }
 
 
-   
 
     glutSwapBuffers();
 }
@@ -310,6 +360,7 @@ void InitMatrices()
 {
     //mv for every object
     //model[0] = glm::mat4();
+    primitive_model = glm::translate(glm::mat4(), glm::vec3(0.0, 20.0, 0.0));
     model[0] = glm::translate(glm::mat4(), glm::vec3(3.0, 1.0, 0.0));
     model[1] = glm::mat4();
     model[2] = glm::translate(glm::mat4(), glm::vec3(-2.0, 1.0, 0.0));
@@ -346,7 +397,7 @@ void InitMatrices()
     for (int i = 0; i < objectCount; i++) {
         mv[i] = cameras[activeCamera]->view * model[i];
     }
-   
+    primitive_mv = cameras[activeCamera]->view * primitive_model;
 }
 
 
@@ -362,7 +413,8 @@ void InitBuffers()
     GLuint vbo_vertices;
     GLuint vbo_normals;
     GLuint vbo_uvs;
-   
+    GLuint ibo_cube_elements;
+
     // Get vertex attributes
     position_id = glGetAttribLocation(program_id, "position");
     //color_id = glGetAttribLocation(program_id, "color");
@@ -376,6 +428,7 @@ void InitBuffers()
         glBufferData(GL_ARRAY_BUFFER, uvs[i].size() * sizeof(glm::vec2),
             &uvs[i][0], GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
 
 
         // vbo for vertices
@@ -425,8 +478,51 @@ void InitBuffers()
         // Stop bind to vao
         glBindVertexArray(0);
     }
+    //Primitive----------
+    glGenBuffers(1, &vbo_vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(primitive_vertices), primitive_vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glGenBuffers(1, &ibo_cube_elements);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+    glBufferData(
+        GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements),
+        cube_elements, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
+    // Get vertex attributes
+   // position_id = glGetAttribLocation(program_id, "position");
+
+
+    // Allocate memory for vao
+    glGenVertexArrays(1, &primitive_vao);
+
+    // Bind to vao
+    glBindVertexArray(primitive_vao);
+
+    // Bind vertices to vao
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+    glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(position_id);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+
+
+    // Stop bind to vao
+    glBindVertexArray(0);
+
+
+    
+
+ 
+
+   
+    //End primitive------------
     glUseProgram(program_id);
 
   
@@ -443,6 +539,7 @@ void InitBuffers()
         program_id, "mat_specular");
     uniform_material_power = glGetUniformLocation(
         program_id, "mat_power");
+    uniform_isPrimitive = glGetUniformLocation(program_id, "isPrimitive");
     
     //Fill uniform vars
     glUniform3fv(uniform_light_pos, 1, glm::value_ptr(light.position));

@@ -15,13 +15,15 @@ uniform vec3 mat_ambient;   //
 uniform vec3 mat_diffuse;   //
 uniform float mat_power;    //
 uniform vec3 mat_specular;  //
+uniform bool isPrimitive;
 
 uniform sampler2D texsampler;   //
 
 
 void main()
 {
-    // Normalize the incoming N, L and V vectors
+    if(!isPrimitive){
+     // Normalize the incoming N, L and V vectors
     vec3 N = normalize(fs_in.N);
     vec3 L = normalize(fs_in.L);
     vec3 V = normalize(fs_in.V);
@@ -41,6 +43,10 @@ void main()
     // Write final color to the framebuffer
     gl_FragColor = vec4(mat_ambient + diffuse + specular, 1.0);
     //gl_FragColor = vec4(mat_ambient + diffuse, 1.0);
+    }else{
+        gl_FragColor = vec4(1.0,0.75,0.72,1.0);
+    }
+   
 
 
 
