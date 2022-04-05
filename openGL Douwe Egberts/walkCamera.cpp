@@ -41,7 +41,14 @@ void WalkCamera::Move(int key, int deltaTime) {
 	}else if (key == 108) { //l
 		yaw += 0.1f * deltaTime;
 		CalculateCameraDirection();
+	}//Only for testing
+	else if (key == 'q') {
+		cameraPos -= cameraSpeed * deltaTime * cameraUp;
 	}
+	else if (key == 'e'){
+		cameraPos += cameraSpeed * deltaTime * cameraUp;
+	}
+	//End testing
 	else {
 		Camera::Move(key, deltaTime);
 	}

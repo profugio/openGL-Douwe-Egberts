@@ -42,18 +42,9 @@ vector<glm::vec3> normals[objectCount];
 vector<glm::vec3> vertices[objectCount];
 vector<glm::vec2> uvs[objectCount];
 
+//Cameras
 Camera* cameras[2];
 int activeCamera;
-
-//Camera values (moved to camera class
-glm::vec3 cameraPos;
-glm::vec3 cameraFront;
-glm::vec3 cameraUp;
-glm::vec3 cameraTarget;
-glm::vec3 cameraDirection;
-
-float yaw = -90.0f;
-float pitch = 0.0f;
 
 //Input buffer
 bool keyBuffer[128];
@@ -86,23 +77,153 @@ GLuint uniform_material_diffuse;
 GLuint uniform_specular;
 GLuint uniform_material_power;
 GLuint uniform_isPrimitive;
+GLuint uniform_testColor;
 
 
-glm::mat4 primitive_model;
-glm::mat4 primitive_mv;
-GLuint primitive_vao;
-GLfloat primitive_vertices[] = {
-    // front
-    -1.0, -1.0, 1.0,
-    1.0, -1.0, 1.0,
-    1.0, 1.0, 1.0,
-    -1.0, 1.0, 1.0,
-    // back
-    -1.0, -1.0, 0.5,
-    1.0, -1.0, 0.5,
-    1.0, 1.0, 0.5,
-    -1.0, 1.0, 0.5
+//Primitives
+const unsigned int primitiveObjectCount = 10;
+glm::mat4 primitiveModels[primitiveObjectCount];
+glm::mat4 primitiveMvs[primitiveObjectCount];
+GLuint primitiveVao[primitiveObjectCount];
+vector<glm::vec3> primitive_vertices[primitiveObjectCount] = {
+    //Right armrest
+    {
+        // front
+        glm::vec3(-1.5, -1.0, 1.0),
+        glm::vec3(1.0, -1.0, 1.0),
+        glm::vec3(1.0, 1.0, 1.0),
+        glm::vec3(-1.5, 1.0, 1.0),
+        // back
+        glm::vec3(-1.5, -1.0, 0.5),
+        glm::vec3(1.0, -1.0, 0.5),
+        glm::vec3(1.0, 1.0, 0.5),
+        glm::vec3(-1.5, 1.0, 0.5)
+    },
+    //Left armrest
+    {
+        // front 
+        glm::vec3(-1.5, -1.0 , -8.0),
+        glm::vec3(1.0, -1.0, -8.0),
+        glm::vec3(1.0, 1.0, -8.0),
+        glm::vec3(-1.5, 1.0, -8.0),
+        //back
+        glm::vec3(-1.5, -1.0 , -8.5),
+        glm::vec3(1.0, -1.0, -8.5),
+        glm::vec3(1.0, 1.0, -8.5),
+        glm::vec3(-1.5, 1.0, -8.5)
+
+    },
+    //Backsupport
+    {
+        //front
+        glm::vec3(-1.5, -1.0, 1.0),
+        glm::vec3(-1.5, -1.0, -8.5),
+        glm::vec3(-1.5, 1.5, -8.5),
+        glm::vec3(-1.5, 1.5, 1.0),
+        //back
+        glm::vec3(-1.0, -1.0, 1.0),
+        glm::vec3(-1.0, -1.0, -8.5),
+        glm::vec3(-1.0, 1.5, -8.5),
+        glm::vec3(-1.0, 1.5, 1.0),
+    },
+    //sit cushion
+    {
+        //front
+        glm::vec3(-1.5, -1.0, 1.0),
+        glm::vec3(-1.5, -1.0, -8.5),
+        glm::vec3(1.0, -1.0, -8.5),
+        glm::vec3(1.0, -1.0, 1.0),
+        //back
+        glm::vec3(-1.5, -0.5, 1.0),
+        glm::vec3(-1.5, -0.5, -8.5),
+        glm::vec3(1.0, -0.5, -8.5),
+        glm::vec3(1.0, -0.5, 1.0),
+    },
+    //front right leg
+    {
+        //front
+        glm::vec3(0.6, -1.0, -7.9),
+        glm::vec3(0.6, -1.0, -8.1),
+        glm::vec3(0.8, -1.0, -8.1),
+        glm::vec3(0.8, -1.0, -7.9),
+        //back
+        glm::vec3(0.6, -1.8, -7.9),
+        glm::vec3(0.6, -1.8, -8.1),
+        glm::vec3(0.8, -1.8, -8.1),
+        glm::vec3(0.8, -1.8, -7.9)
+    },
+    //front left leg
+    {
+                //front
+        glm::vec3(0.6, -1.0, 0.6),
+        glm::vec3(0.6, -1.0, 0.4),
+        glm::vec3(0.8, -1.0, 0.4),
+        glm::vec3(0.8, -1.0, 0.6),
+        //back
+        glm::vec3(0.6, -1.8, 0.6),
+        glm::vec3(0.6, -1.8, 0.4),
+        glm::vec3(0.8, -1.8, 0.4),
+        glm::vec3(0.8, -1.8, 0.6)
+    },
+    //back right leg
+    {
+        //front
+        glm::vec3(-1.1, -1.0, -7.9),
+        glm::vec3(-1.1, -1.0, -8.1),
+        glm::vec3(-0.9, -1.0, -8.1),
+        glm::vec3(-0.9, -1.0, -7.9),
+        //back
+        glm::vec3(-1.1, -1.8, -7.9),
+        glm::vec3(-1.1, -1.8, -8.1),
+        glm::vec3(-0.9, -1.8, -8.1),
+        glm::vec3(-0.9, -1.8, -7.9)
+    },
+    //back left leg
+    {
+        //front
+        glm::vec3(-1.1, -1.0, 0.6),
+        glm::vec3(-1.1, -1.0, 0.4),
+        glm::vec3(-0.9, -1.0, 0.4),
+        glm::vec3(-0.9, -1.0, 0.6),
+        //back
+        glm::vec3(-1.1, -1.8, 0.6),
+        glm::vec3(-1.1, -1.8, 0.4),
+        glm::vec3(-0.9, -1.8, 0.4),
+        glm::vec3(-0.9, -1.8, 0.6)
+    },
+    //back middle leg
+    {
+        //front
+        glm::vec3(-1.1, -1.0, -3.65),
+        glm::vec3(-1.1, -1.0, -3.85),
+        glm::vec3(-0.9, -1.0, -3.85),
+        glm::vec3(-0.9, -1.0, -3.65),
+        //back
+        glm::vec3(-1.1, -1.8, -3.65),
+        glm::vec3(-1.1, -1.8, -3.85),
+        glm::vec3(-0.9, -1.8, -3.85),
+        glm::vec3(-0.9, -1.8, -3.65)
+    },
+    //front middle leg
+    {
+        //front
+        glm::vec3(0.6, -1.0, -3.65),
+        glm::vec3(0.6, -1.0, -3.85),
+        glm::vec3(0.8, -1.0, -3.85),
+        glm::vec3(0.8, -1.0, -3.65),
+        //back
+        glm::vec3(0.6, -1.8, -3.65),
+        glm::vec3(0.6, -1.8, -3.85),
+        glm::vec3(0.8, -1.8, -3.85),
+        glm::vec3(0.8, -1.8, -3.65)
+    }
+    
+
 };
+
+
+
+
 
 GLfloat primitive_colors[] = {
     // front colors
@@ -247,22 +368,39 @@ void Render()
 
     // Attach to program_id
     glUseProgram(program_id);
+    glm::vec3 color;
+    //Primitives
+    for (int i = 0; i < primitiveObjectCount; i++) {
+        if (i == 0) {
+            color = glm::vec3(1.0, 0.0, 0.0);
+        }
+        else if (i == 1) {
+            color = glm::vec3(0.0, 1.0, 0.0);
+        }
+        else if (i == 2) {
+            color = glm::vec3(0.0, 0.0, 1.0);
+        }
+        primitiveMvs[i] = cameras[activeCamera]->view * primitiveModels[i];
+        glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(primitiveMvs[i]));
+        glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
+        glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(materials[0].ambient_color));
+        glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(materials[0].diffuse_color));
+        glUniform3fv(uniform_specular, 1, glm::value_ptr(materials[0].specular));
+        glUniform1f(uniform_material_power, materials[0].power);
+        glm::vec3 color = glm::vec3(1.0, 0.0, 0.0);
+        glUniform1i(uniform_isPrimitive, true);
+        glUniform3fv(uniform_testColor, 1, glm::value_ptr(color));
+        // Send vao
+        glBindVertexArray(primitiveVao[i]);
+        //glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_LINES, sizeof(cube_elements) / sizeof(GLushort),
+            GL_UNSIGNED_SHORT, 0);
+        glBindVertexArray(0);
+    }
+   
+    
+  
 
-    primitive_mv = cameras[activeCamera]->view * primitive_model;
-
-    glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(primitive_mv));
-    glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
-    glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(materials[0].ambient_color));
-    glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(materials[0].diffuse_color));
-    glUniform3fv(uniform_specular, 1, glm::value_ptr(materials[0].specular));
-    glUniform1f(uniform_material_power, materials[0].power);
-    glUniform1i(uniform_isPrimitive, true);
-    // Send vao
-    glBindVertexArray(primitive_vao);
-    //glDrawArrays(GL_TRIANGLES, 0, 3);
-    glDrawElements(GL_LINES, sizeof(cube_elements) / sizeof(GLushort),
-        GL_UNSIGNED_SHORT, 0);
-    glBindVertexArray(0);
 
     for (int i = 0; i < objectCount; i++) {
         mv[i] = cameras[activeCamera]->view * model[i];
@@ -359,46 +497,26 @@ void InitShaders()
 void InitMatrices()
 {
     //mv for every object
-    //model[0] = glm::mat4();
-    primitive_model = glm::translate(glm::mat4(), glm::vec3(0.0, 20.0, 0.0));
+    for (int i = 0; i < primitiveObjectCount; i++) {
+        primitiveModels[i] = glm::translate(glm::mat4(), glm::vec3(0.0, 20.0, 0.0));
+
+    }
+    
     model[0] = glm::translate(glm::mat4(), glm::vec3(3.0, 1.0, 0.0));
     model[1] = glm::mat4();
     model[2] = glm::translate(glm::mat4(), glm::vec3(-2.0, 1.0, 0.0));
     model[3] = glm::translate(glm::mat4(), glm::vec3(0.0, 1.0, -3.0));
     model[3] = glm::scale(model[3], glm::vec3(10.0, 0.0, 10.0));
-    //model[4] = glm::translate(glm::mat4(), glm::vec3(0.0, 4.0, 0.0));
-    //model[4] = glm::rotate(model[4], glm::radians(90.0f), glm::vec3(0.0,1.0,0.0));
-
-    //cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-    //
-   
-    //cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-    ////cameraDirection = glm::normalize(cameraPos - cameraTarget);
-    //cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    //cameraDirection.y = sin(glm::radians(pitch));
-    //cameraDirection.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    //glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    //glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-    //cameraUp = glm::cross(cameraDirection, cameraRight);
-    //cameraFront = glm::normalize(cameraDirection);
-    //for (int i = 0; i < objectCount; i++) {
-    //    
-    //    view = glm::lookAt(
-    //        glm::vec3(cameraPos),  // eye
-    //        glm::vec3(cameraFront),  // center
-    //        glm::vec3(cameraUp));  // up
-    //    projection = glm::perspective(
-    //        glm::radians(45.0f),
-    //        1.0f * WIDTH / HEIGHT, 0.1f,
-    //        1000.0f);
-    //    mv[i] =  view * model[i];
-    //}
 
     for (int i = 0; i < objectCount; i++) {
         mv[i] = cameras[activeCamera]->view * model[i];
     }
-    primitive_mv = cameras[activeCamera]->view * primitive_model;
+    for (int i = 0; i < primitiveObjectCount; i++) {
+        primitiveMvs[i] = cameras[activeCamera]->view * primitiveModels[i];
+    }
+
 }
+
 
 
 //------------------------------------------------------------
@@ -479,46 +597,46 @@ void InitBuffers()
         glBindVertexArray(0);
     }
     //Primitive----------
-    glGenBuffers(1, &vbo_vertices);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(primitive_vertices), primitive_vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    for (int i = 0; i < primitiveObjectCount; i++) {
+        glGenBuffers(1, &vbo_vertices);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+        glBufferData(GL_ARRAY_BUFFER, primitive_vertices[i].size() * sizeof(glm::vec3), &primitive_vertices[i][0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    glGenBuffers(1, &ibo_cube_elements);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements),
-        cube_elements, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-
-    // Get vertex attributes
-   // position_id = glGetAttribLocation(program_id, "position");
+        glGenBuffers(1, &ibo_cube_elements);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, sizeof(cube_elements),
+            cube_elements, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
-    // Allocate memory for vao
-    glGenVertexArrays(1, &primitive_vao);
-
-    // Bind to vao
-    glBindVertexArray(primitive_vao);
-
-    // Bind vertices to vao
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-    glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(position_id);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        // Get vertex attributes
+       // position_id = glGetAttribLocation(program_id, "position");
 
 
+        // Allocate memory for vao
+        glGenVertexArrays(1, &primitiveVao[i]);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+        // Bind to vao
+        glBindVertexArray(primitiveVao[i]);
+
+        // Bind vertices to vao
+        glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+        glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(position_id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
-    // Stop bind to vao
-    glBindVertexArray(0);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
 
 
-    
+        // Stop bind to vao
+        glBindVertexArray(0);
 
+    }
+   
  
 
    
@@ -540,6 +658,7 @@ void InitBuffers()
     uniform_material_power = glGetUniformLocation(
         program_id, "mat_power");
     uniform_isPrimitive = glGetUniformLocation(program_id, "isPrimitive");
+    uniform_testColor = glGetUniformLocation(program_id, "testColor");
     
     //Fill uniform vars
     glUniform3fv(uniform_light_pos, 1, glm::value_ptr(light.position));

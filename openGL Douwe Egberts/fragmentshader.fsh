@@ -18,7 +18,7 @@ uniform vec3 mat_specular;  //
 uniform bool isPrimitive;
 
 uniform sampler2D texsampler;   //
-
+uniform vec3 testColor;
 
 void main()
 {
@@ -44,7 +44,7 @@ void main()
     gl_FragColor = vec4(mat_ambient + diffuse + specular, 1.0);
     //gl_FragColor = vec4(mat_ambient + diffuse, 1.0);
     }else{
-        gl_FragColor = vec4(1.0,0.75,0.72,1.0);
+        gl_FragColor = vec4(testColor,1.0);
     }
    
 
