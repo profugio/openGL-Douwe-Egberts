@@ -13,6 +13,7 @@
 #include "texture.h"
 #include "walkCamera.h"
 #include "droneCamera.h"
+#include "mesh.h"
 
 using namespace std;
 
@@ -22,7 +23,7 @@ using namespace std;
 //--------------------------------------------------------------------------------
 
 const int WIDTH = 800, HEIGHT = 600;
-const unsigned int objectCount = 4;
+const unsigned int objectCount = 5;
 
 const char* fragshader_name = "fragmentshader.fsh";
 const char* vertexshader_name = "vertexshader.vsh";
@@ -37,11 +38,6 @@ unsigned int oldTimeSinceStart;
 unsigned int deltaTime;
 
 
-//Instead well have an vector  with all objects vector<Model> models;
-vector<glm::vec3> normals[objectCount];
-vector<glm::vec3> vertices[objectCount];
-vector<glm::vec2> uvs[objectCount];
-
 //Cameras
 Camera* cameras[2];
 int activeCamera;
@@ -50,12 +46,9 @@ int activeCamera;
 bool keyBuffer[128];
 
 
+vector<Mesh*> meshes;
 
-
-
-
-
-
+vector<Vertex> vertexList;
 
 //--------------------------------------------------------------------------------
 // Variables
@@ -244,20 +237,13 @@ GLushort cube_elements[] = {
     4,5,5,6,6,7,7,4   //back
 };
 // Matrices will move to Model/camera class;
-glm::mat4 model[objectCount], view, projection;
-glm::mat4 mv[objectCount];
+
 
 struct LightSource {
     glm::vec3 position;
 };
 
-//Moved to model class;
-struct Material {
-    glm::vec3 ambient_color;
-    glm::vec3 diffuse_color;
-    glm::vec3 specular;
-    float power;
-};
+
 
 Material materials[objectCount];
 LightSource light;
@@ -356,15 +342,7 @@ void Render()
         }
     }
 
-
     // Do transformation
-    model[0] = glm::rotate(model[0], 0.01f, glm::vec3(1.0f, 1.0f, 0.0f));
-   
-    model[1] = glm::rotate(model[1], 0.01f, glm::vec3(1.0f, 1.0f, 0.0f));
-    model[2] = glm::rotate(model[2], 0.005f, glm::vec3(0.0f, 1.0f, 0.0f));
-
-    
-
 
     // Attach to program_id
     glUseProgram(program_id);
@@ -392,7 +370,7 @@ void Render()
         glUniform3fv(uniform_testColor, 1, glm::value_ptr(color));
         // Send vao
         glBindVertexArray(primitiveVao[i]);
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
+
         glDrawElements(GL_LINES, sizeof(cube_elements) / sizeof(GLushort),
             GL_UNSIGNED_SHORT, 0);
         glBindVertexArray(0);
@@ -403,25 +381,25 @@ void Render()
 
 
     for (int i = 0; i < objectCount; i++) {
-        mv[i] = cameras[activeCamera]->view * model[i];
+        meshes[i]->mv = cameras[activeCamera]->view * meshes[i]->model;
 
         // Send mv
-        glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(mv[i]));
+        glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(meshes[i]->mv));
 
         //Bind texture
         glBindTexture(GL_TEXTURE_2D, texture_id[i]);
 
         //Fill uniform vars for material
-        glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(mv[i]));
         glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
-        glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(materials[i].ambient_color));
-        glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(materials[i].diffuse_color));
-        glUniform3fv(uniform_specular, 1, glm::value_ptr(materials[i].specular));
-        glUniform1f(uniform_material_power, materials[i].power);
+        glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(meshes[i]->material.ambient_color));
+        glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(meshes[i]->material.diffuse_color));
+        glUniform3fv(uniform_specular, 1, glm::value_ptr(meshes[i]->material.specular));
+        glUniform1f(uniform_material_power, meshes[i]->material.power);
         glUniform1i(uniform_isPrimitive, false);
         // Send vao
+
         glBindVertexArray(vao[i]);
-        glDrawArrays(GL_TRIANGLES, 0, vertices[i].size());
+        glDrawArrays(GL_TRIANGLES, 0, meshes[i]->vertices.size());
         glBindVertexArray(0);
    }
 
@@ -464,12 +442,27 @@ void InitGlutGlew(int argc, char** argv)
 
 
 void InitLoadObjects() {
-    const char* objects[objectCount] = { "teapot.obj", "cylinder18.obj", "tableTest.obj", "plane.obj"};
-    const char* textures[objectCount] = { "Textures/uvtemplate.bmp", "Textures/Yellobrk.bmp","Textures/woodTexture.bmp", "Textures/grass.bmp"};
+    const char* objects[objectCount] = { "teapot.obj", "cylinder18.obj", "tableTest.obj", "plane.obj", "cushion5.obj"};
+    const char* textures[objectCount] = { "Textures/uvtemplate.bmp", "Textures/Yellobrk.bmp","Textures/woodTexture.bmp", "Textures/grass.bmp", "Textures/redCloth.bmp"};
+   
+    vector<glm::vec3> vertices;
+    vector<glm::vec3> normals;
+    vector<glm::vec2> uvs;
     for (int i = 0; i < objectCount; i++) {
-        bool res = loadOBJ(objects[i], vertices[i], uvs[i], normals[i]);
+        bool res = loadOBJ(objects[i], vertices, uvs, normals);
+        for (int j = 0; j < vertices.size(); j++) {
+            vertexList.push_back({vertices[j], normals[j], uvs[j]});
+        }
+        Mesh* m = new Mesh();
+        m->CreateMesh(vertices, normals, uvs);
+        meshes.push_back(m);
+        vertices.clear();
+        normals.clear();
+        uvs.clear();
+        vertexList.clear();
         texture_id[i] = loadBMP(textures[i]);
     }
+   
 }
 
 
@@ -501,16 +494,20 @@ void InitMatrices()
         primitiveModels[i] = glm::translate(glm::mat4(), glm::vec3(0.0, 20.0, 0.0));
 
     }
-    
-    model[0] = glm::translate(glm::mat4(), glm::vec3(3.0, 1.0, 0.0));
-    model[1] = glm::mat4();
-    model[2] = glm::translate(glm::mat4(), glm::vec3(-2.0, 1.0, 0.0));
-    model[3] = glm::translate(glm::mat4(), glm::vec3(0.0, 1.0, -3.0));
-    model[3] = glm::scale(model[3], glm::vec3(10.0, 0.0, 10.0));
+   
+    meshes[0]->model = glm::translate(glm::mat4(), glm::vec3(3.0, 1.0, 0.0));
+    meshes[1]->model = glm::mat4();
+    meshes[2]->model = glm::translate(glm::mat4(), glm::vec3(-2.0, 1.0, 0.0));
+    meshes[3]->model = glm::translate(glm::mat4(), glm::vec3(0.0, 1.0, -3.0));
+    meshes[3]->model = glm::scale(meshes[3]->model, glm::vec3(10.0, 0.0, 10.0));
+    meshes[4]->model = glm::translate(meshes[4]->model, glm::vec3(0.0, 20.0, 0.0));
+    meshes[4]->model = glm::scale(meshes[4]->model, glm::vec3(3.0,3.0,3.0));
+
 
     for (int i = 0; i < objectCount; i++) {
-        mv[i] = cameras[activeCamera]->view * model[i];
+        meshes[i]->mv = cameras[activeCamera]->view * meshes[i]->model;
     }
+    
     for (int i = 0; i < primitiveObjectCount; i++) {
         primitiveMvs[i] = cameras[activeCamera]->view * primitiveModels[i];
     }
@@ -532,19 +529,25 @@ void InitBuffers()
     GLuint vbo_normals;
     GLuint vbo_uvs;
     GLuint ibo_cube_elements;
+    GLuint vbo;
+    //GLuint layout;
 
     // Get vertex attributes
     position_id = glGetAttribLocation(program_id, "position");
+    //layout = glGetAttribLocation(program_id, "layout");
     //color_id = glGetAttribLocation(program_id, "color");
     normal_id = glGetAttribLocation(program_id, "normal");
     GLuint uv_id = glGetAttribLocation(program_id, "uv");
     
     for (int i = 0; i < objectCount; i++) {
-        // vbo for uvs
+
+
+
+
         glGenBuffers(1, &vbo_uvs);
         glBindBuffer(GL_ARRAY_BUFFER, vbo_uvs);
-        glBufferData(GL_ARRAY_BUFFER, uvs[i].size() * sizeof(glm::vec2),
-            &uvs[i][0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, meshes[i]->uvs.size() * sizeof(glm::vec2),
+            &meshes[i]->uvs[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
 
@@ -553,7 +556,7 @@ void InitBuffers()
         glGenBuffers(1, &vbo_vertices);
         glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
         glBufferData(GL_ARRAY_BUFFER,
-            vertices[i].size() * sizeof(glm::vec3), &vertices[i][0],
+            meshes[i]->vertices.size() * sizeof(glm::vec3), &meshes[i]->vertices[0],
             GL_STATIC_DRAW);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -562,10 +565,14 @@ void InitBuffers()
         glGenBuffers(1, &vbo_normals);
         glBindBuffer(GL_ARRAY_BUFFER, vbo_normals);
         glBufferData(GL_ARRAY_BUFFER,
-            normals[i].size() * sizeof(glm::vec3),
-            &normals[i][0], GL_STATIC_DRAW);
+            meshes[i]->normals.size() * sizeof(glm::vec3),
+            &meshes[i]->normals[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+        //glGenBuffers(1, &vbo);
+        //glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        //glBufferData(GL_ARRAY_BUFFER, vertexList.size() * sizeof(Vertex), vertexList.data(), GL_STATIC_DRAW);
+        //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
         // Allocate memory for vao
@@ -574,22 +581,32 @@ void InitBuffers()
         // Bind to vao
         glBindVertexArray(vao[i]);
 
+        
+        //glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        //
+        //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+        //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(Vertex)-(5*sizeof(float))));
+        //glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(Vertex)-(2*sizeof(float))));
+        //glEnableVertexAttribArray(0);
+        //glEnableVertexAttribArray(1);
+        //glEnableVertexAttribArray(2);
+        //glBindBuffer(GL_ARRAY_BUFFER, 0);
         // Bind vertices to vao
         glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-        glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(position_id);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
+        glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         // Bind normals to vao
         glBindBuffer(GL_ARRAY_BUFFER, vbo_normals);
-        glVertexAttribPointer(normal_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(normal_id);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float),0);
+        glEnableVertexAttribArray(1);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         // Bind to vao
         glBindBuffer(GL_ARRAY_BUFFER, vbo_uvs);
-        glVertexAttribPointer(uv_id, 2, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(uv_id);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), 0);
+        glEnableVertexAttribArray(2);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
@@ -623,8 +640,10 @@ void InitBuffers()
 
         // Bind vertices to vao
         glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-        glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(position_id);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+        glEnableVertexAttribArray(0);
+        //glVertexAttribPointer(position_id, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        //glEnableVertexAttribArray(position_id);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
@@ -662,7 +681,7 @@ void InitBuffers()
     
     //Fill uniform vars
     glUniform3fv(uniform_light_pos, 1, glm::value_ptr(light.position));
-    //glUniformMatrix4fv(uniform_proj, 1,GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
+
     
 }
 
@@ -677,8 +696,9 @@ int main(int argc, char** argv)
     InitLight();
     InitShaders();
     InitCameras();
-    InitMatrices();
     InitLoadObjects();
+    InitMatrices();
+    
     InitBuffers();
     timeSinceStart = glutGet(GLUT_ELAPSED_TIME);
     glEnable(GL_DEPTH_TEST);

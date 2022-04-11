@@ -5,14 +5,18 @@ uniform mat4 mv;            //x
 uniform mat4 projection;    //
 uniform vec3 light_pos;     //
 
-uniform bool primitive;
+uniform bool isPrimitive;
 // Per-vertex inputs
 in vec3 position;           //
-in vec3 normal;             //
+//in vec3 normal;             //
 
-in vec2 uv;
+//in vec2 uv;
 out vec2 UV;
 
+
+layout(location = 0) in vec3 pos;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in vec2 uv;
 
 
 
@@ -25,9 +29,9 @@ out VS_OUT
 
 void main()
 {
-    if (!primitive) {
+    if (!isPrimitive) {
         // Calculate view-space coordinate
-        vec4 P = mv * vec4(position, 1.0);
+        vec4 P = mv * vec4(pos, 1.0);
 
         // Calculate normal in view-space
         vs_out.N = mat3(mv) * normal;
@@ -45,7 +49,7 @@ void main()
         UV = uv;
     }
     else {
-        vec4 P = mv * vec4(position, 1.0);
+        vec4 P = mv * vec4(pos, 1.0);
         gl_Position = projection * P;
     }
  
