@@ -27,6 +27,7 @@ public:
 	std::vector<glm::vec3> color;
 	Material material;
 	GLuint texture_id;
+	bool isPrimitive;
 	GLuint vao;
 	GLuint vbo;
 	Mesh();
