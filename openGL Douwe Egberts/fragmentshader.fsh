@@ -15,14 +15,15 @@ uniform vec3 mat_ambient;   //
 uniform vec3 mat_diffuse;   //
 uniform float mat_power;    //
 uniform vec3 mat_specular;  //
-uniform bool isPrimitive;
+uniform bool hasTexture;
 
 uniform sampler2D texsampler;   //
 uniform vec3 testColor;
 
+
 void main()
 {
-    if(!isPrimitive){
+
      // Normalize the incoming N, L and V vectors
     vec3 N = normalize(fs_in.N);
     vec3 L = normalize(fs_in.L);
@@ -35,7 +36,8 @@ void main()
     //vec3 diffuse = max(dot(N, L), 0.0) * mat_diffuse;
 
     //texture texture texture
-      vec3 diffuse = max(dot(N, L), 0.0) *
+    if(hasTexture){
+     vec3 diffuse = max(dot(N, L), 0.0) *
         texture2D(texsampler, UV).rgb;
   
  
@@ -44,9 +46,11 @@ void main()
     // Write final color to the framebuffer
     gl_FragColor = vec4(mat_ambient + diffuse + specular, 1.0);
     //gl_FragColor = vec4(mat_ambient + diffuse, 1.0);
+  
     }else{
-        gl_FragColor = vec4(testColor,1.0);
+       gl_FragColor = vec4(testColor,1.0);
     }
+
    
 
 

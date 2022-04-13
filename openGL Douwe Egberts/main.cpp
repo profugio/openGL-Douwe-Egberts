@@ -23,7 +23,7 @@ using namespace std;
 //--------------------------------------------------------------------------------
 
 const int WIDTH = 800, HEIGHT = 600;
-const unsigned int objectCount = 20;
+const unsigned int objectCount = 51;
 
 const char* fragshader_name = "fragmentshader.fsh";
 const char* vertexshader_name = "vertexshader.vsh";
@@ -70,13 +70,15 @@ GLuint uniform_material_ambient;
 GLuint uniform_material_diffuse;
 GLuint uniform_specular;
 GLuint uniform_material_power;
-GLuint uniform_isPrimitive;
+GLuint uniform_hasTexture;
 GLuint uniform_testColor;
 
 
 //Primitives
-const unsigned int primitiveObjectCount = 10;
-vector<glm::vec3> primitive_vertices[primitiveObjectCount] = {
+const unsigned int couchMeshCount = 10;
+vector<glm::vec3> couch_vertices[couchMeshCount] = {
+
+    //Couch
     //left armrest
     {
         // front
@@ -208,23 +210,157 @@ vector<glm::vec3> primitive_vertices[primitiveObjectCount] = {
         glm::vec3(0.8, -1.8, -0.1),
         glm::vec3(0.8, -1.8, 0.1)
     }
-    
+    //---End couch---
 
 };
-const unsigned int windowMeshesCount = 1;
-vector<glm::vec3> primitive_window[windowMeshesCount]{
+
+const unsigned int windowMeshCount = 11;
+vector<glm::vec3> windowMeshes[windowMeshCount] = {
+    //Bottom beam
+     {
+       //front
+       glm::vec3(-3.0, -0.6, 0.2),
+       glm::vec3(3.0, -0.6, 0.2),
+       glm::vec3(3.0, -0.9, 0.2),
+       glm::vec3(-3.0, -0.9, 0.2),
+       //back
+       glm::vec3(-3.0, -0.6, -0.2),
+       glm::vec3(3.0, -0.6, -0.2),
+       glm::vec3(3.0, -0.9, -0.2),
+       glm::vec3(-3.0, -0.9, -0.2),
+     },
+     //Right beam
     {
-    glm::vec3(15.0, 1.0, -15.0),
-    glm::vec3(15.0, 1.0, 15.0),
-    glm::vec3(15.0, 1.5, 15.0),
-    glm::vec3(15.0, 1.5, -15.0),
-
-    glm::vec3(15.5, 1.0, -15.0),
-    glm::vec3(15.5, 1.0, 15.0),
-    glm::vec3(15.5, 1.5, 15.0),
-    glm::vec3(15.5, 1.5, -15.0)
-    }
+        //front
+        glm::vec3(2.8, -0.6, 0.2),
+        glm::vec3(3.0, -0.6, 0.2),
+        glm::vec3(3.0, 8.0, 0.2),
+        glm::vec3(2.8, 8.0, 0.2),
+        //back
+        glm::vec3(2.8, -0.6, -0.2),
+        glm::vec3(3.0, -0.6, -0.2),
+        glm::vec3(3.0, 7.4, -0.2),
+        glm::vec3(2.8, 7.4, -0.2)
+    },
+    //Left beam
+    {
+        //front
+        glm::vec3(-3.0, -0.6, 0.2),
+        glm::vec3(-2.8, -0.6, 0.2),
+        glm::vec3(-2.8, 7.4, 0.2),
+        glm::vec3(-3.0, 7.4, 0.2),
+        //back
+        glm::vec3(-3.0, -0.6, -0.2),
+        glm::vec3(-2.8, -0.6, -0.2),
+        glm::vec3(-2.8, 7.4, -0.2),
+        glm::vec3(-3.0, 7.4, -0.2)
+    },
+    //Top beam
+    {
+        //front
+        glm::vec3(-3.0, 7.4, 0.2),
+        glm::vec3(3.0, 7.4, 0.2),
+        glm::vec3(3.0, 7.6, 0.2),
+        glm::vec3(-3.0, 7.6, 0.2),
+        //back
+        glm::vec3(-3.0, 7.4, -0.2),
+        glm::vec3(3.0, 7.4, -0.2),
+        glm::vec3(3.0, 7.6, -0.2),
+        glm::vec3(-3.0, 7.6, -0.2),
+    },
+    //Middle beam horizontal
+    {
+        //front
+        glm::vec3(-3.0, 3.3, 0.2),
+        glm::vec3(3.0, 3.3, 0.2),
+        glm::vec3(3.0, 3.5, 0.2),
+        glm::vec3(-3.0, 3.5, 0.2),
+        //back
+        glm::vec3(-3.0, 3.3, -0.2),
+        glm::vec3(3.0, 3.3, -0.2),
+        glm::vec3(3.0, 3.5, -0.2),
+        glm::vec3(-3.0, 3.5, -0.2),
+    },
+    //Middle beam vertical
+    {
+        //front
+        glm::vec3(-0.1, -0.6, 0.2),
+        glm::vec3(0.1, -0.6, 0.2),
+        glm::vec3(0.1, 12.0, 0.2),
+        glm::vec3(-0.1, 12.0, 0.2),
+        //back
+        glm::vec3(-0.1, -0.6, -0.2),
+        glm::vec3(0.1, -0.6, -0.2),
+        glm::vec3(0.1, 12.0, -0.2),
+        glm::vec3(-0.1, 12.0, -0.2),
+    },
+    //Left frame
+    {
+        //front
+        glm::vec3(-3.6, -0.4, 0.4),
+        glm::vec3(-3.0, -0.4, 0.4),
+        glm::vec3(-3.0, 12.0, 0.4),
+        glm::vec3(-3.6, 12.0, 0.4),
+        //back
+        glm::vec3(-3.6, -0.4, -0.4),
+        glm::vec3(-3.0, -0.4, -0.4),
+        glm::vec3(-3.0, 12.0, -0.4),
+        glm::vec3(-3.6, 12.0, -0.4)
+    },
+    //Right frame
+    {
+        //front
+        glm::vec3(3.0, -0.4, 0.4),
+        glm::vec3(3.6, -0.4, 0.4),
+        glm::vec3(3.6, 12.0, 0.4),
+        glm::vec3(3.0, 12.0, 0.4),
+        //back
+        glm::vec3(3.0, -0.4, -0.4),
+        glm::vec3(3.6, -0.4, -0.4),
+        glm::vec3(3.6, 12.0, -0.4),
+        glm::vec3(3.0, 12.0, -0.4)
+    },
+    //Bottom Frame
+    {
+       //front
+       glm::vec3(-3.6, -2.6, 0.4),
+       glm::vec3(3.6, -2.6, 0.4),
+       glm::vec3(3.6, -0.4, 0.4),
+       glm::vec3(-3.6, -0.4, 0.4),
+       //back
+       glm::vec3(-3.6, -2.6, -0.4),
+       glm::vec3(3.6, -2.6, -0.4),
+       glm::vec3(3.6, -0.4, -0.4),
+       glm::vec3(-3.6, -0.4, -0.4),
+     },
+     //Middle horizontal frame
+     {
+        //front
+        glm::vec3(-3.0, 7.6, 0.4),
+        glm::vec3(3.0, 7.6, 0.4),
+        glm::vec3(3.0, 8.2, 0.4),
+        glm::vec3(-3.0, 8.2, 0.4),
+        //back
+        glm::vec3(-3.0, 7.6, -0.4),
+        glm::vec3(3.0, 7.6, -0.4),
+        glm::vec3(3.0, 8.2, -0.4),
+        glm::vec3(-3.0, 8.2, -0.4),
+     },
+     //Top frame
+     {
+         //front
+         glm::vec3(-3.6, 12.0, 0.8),
+         glm::vec3(3.6, 12.0, 0.8),
+         glm::vec3(3.6, 12.6, 0.8),
+         glm::vec3(-3.6, 12.6, 0.8),
+         //back
+         glm::vec3(-3.6, 12.0, -0.4),
+         glm::vec3(3.6, 12.0, -0.4),
+         glm::vec3(3.6, 12.6, -0.4),
+         glm::vec3(-3.6, 12.6, -0.4),
+     },
 };
+
 
 
 GLfloat primitive_colors[] = {
@@ -268,7 +404,7 @@ LightSource light;
 void InitCameras() {
     cameras[0] = new WalkCamera();
     cameras[1] = new DroneCamera();
-    activeCamera = 0;
+    activeCamera = WALK_CAMERA;
 }
 
 
@@ -357,7 +493,8 @@ void Render()
             doKeyboardInput(i, deltaTime);
         }
     }
-
+    //Change light to camera position
+    glUniform3fv(uniform_light_pos, 1, glm::value_ptr(cameras[activeCamera]->cameraPos));
 
 
     // Attach to program_id
@@ -371,13 +508,15 @@ void Render()
         glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(meshes[i]->mv));
 
         //Bind texture
-        if (meshes[i]->texture_id != 0) {
+        //if (meshes[i]->texture_id != 0) {
             glBindTexture(GL_TEXTURE_2D, meshes[i]->texture_id);
-        }
-        else {
-            color = glm::vec3(1.0, 0.0, 0.0);
-            glUniform3fv(uniform_testColor, 1, glm::value_ptr(color));
-        }
+            glUniform1i(uniform_hasTexture, true);
+        //}
+        //else {
+        //    glUniform1i(uniform_hasTexture, false);
+        //    color = glm::vec3(1.0, 0.0, 0.0);
+        //    glUniform3fv(uniform_testColor, 1, glm::value_ptr(color));
+        //}
         
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 
@@ -387,7 +526,7 @@ void Render()
         glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(meshes[i]->material.diffuse_color));
         glUniform3fv(uniform_specular, 1, glm::value_ptr(meshes[i]->material.specular));
         glUniform1f(uniform_material_power, meshes[i]->material.power);
-        glUniform1i(uniform_isPrimitive, false);
+
         
         // Send vao
         glBindVertexArray(meshes[i]->vao);
@@ -432,7 +571,7 @@ void InitGlutGlew(int argc, char** argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowSize(WIDTH, HEIGHT);
-    glutCreateWindow("Hello OpenGL");
+    glutCreateWindow("Douwe Egberts");
     glutDisplayFunc(Render);
     glutKeyboardFunc(keyboardHandler);
     glutTimerFunc(DELTA_TIME, Render, 0);
@@ -444,26 +583,39 @@ void InitGlutGlew(int argc, char** argv)
 
 void InitLoadObjects() {
     //Change these to some sort of dictionairy
-    const char* objects[objectCount] = { "Objects/teapot.obj", "Objects/cylinder18.obj", "Objects/tableTest.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/LampRail.obj", "Objects/LampRail.obj"};
-    const char* textures[objectCount] = { "Textures/uvtemplate.bmp", "Textures/Yellobrk.bmp","Textures/woodTexture.bmp", "Textures/woodFloor.bmp", "Textures/greyCushion.bmp", "Textures/marble.bmp", "Textures/marble.bmp", "Textures/marble.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/ceiling.bmp", "Textures/lampRailTexture2.bmp", "Textures/lampRailTexture2.bmp"};
+    const char* objects[objectCount] = { "Objects/teapot.obj", "Objects/cylinder18.obj", "Objects/smallTable.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/LampRailRight.obj", "Objects/LampRailLeft.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj", "Objects/bookCase.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/smallTable.obj", "Objects/armChair.obj", "Objects/armChair.obj", "Objects/chair2.obj", "Objects/chair2.obj" , "Objects/chair2.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj" };
+    const char* textures[objectCount] = { "Textures/uvtemplate.bmp", "Textures/Yellobrk.bmp","Textures/woodTexture.bmp", "Textures/woodFloor.bmp", "Textures/greyCushion.bmp", "Textures/roundTableMarble.bmp", "Textures/roundTableMarble.bmp", "Textures/roundTableMarble.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/ceiling.bmp", "Textures/lampRailTexture.bmp", "Textures/lampRailTexture.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/greyCushion.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp" , "Textures/redCloth.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp", "Textures/bookCaseTexture.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp" , "Textures/black_metal.bmp", "Textures/woodTexture.bmp", "Textures/armChair.bmp", "Textures/armChair.bmp" , "Textures/black_metal.bmp" , "Textures/black_metal.bmp" , "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp" };
    
     vector<glm::vec3> vertices{};
     vector<glm::vec3> normals{};
     vector<glm::vec2> uvs{};
     glm::vec3 color;
+    GLuint id;
     //Add all imported objects to mesh list
     for (int i = 0; i < objectCount; i++) {
-        bool res = loadOBJ(objects[i], vertices, uvs, normals);
+        if (i == 0 || (objects[i] != objects[i - 1])) {
+            vertices.clear();
+            normals.clear();
+            uvs.clear();
+            bool res = loadOBJ(objects[i], vertices, uvs, normals);
+        }
+
         for (int j = 0; j < vertices.size(); j++) {
             vertexList.push_back({vertices[j], normals[j], uvs[j]});
         }
         Mesh* m = new Mesh();
         m->CreateMesh(vertices, normals, uvs);
-        m->texture_id = loadBMP(textures[i]);
+        if (i == 0 || (textures[i] != textures[i - 1])) {
+            id = loadBMP(textures[i]);
+           
+        }
+        else{
+          
+            id = meshes[i-1]->texture_id;
+        }
+        m->texture_id = id;
         meshes.push_back(m);
-        vertices.clear();
-        normals.clear();
-        uvs.clear();
+       
         vertexList.clear();
 
 
@@ -472,12 +624,12 @@ void InitLoadObjects() {
 
     }
     //Add all primtive meshes to meshList
-    for (int i = 0; i < primitiveObjectCount; i++) {
+    for (int i = 0; i < couchMeshCount; i++) {
         Mesh* m = new Mesh();
         m->isPrimitive = true;
         for (int j = 0; j < 8; j++) {
-            vertices.push_back(primitive_vertices[i][j]);
-            uvs.push_back(glm::vec2(primitive_vertices[i][j].x / primitive_vertices[i][j].z, primitive_vertices[i][j].y / primitive_vertices[i][j].z));
+            vertices.push_back(couch_vertices[i][j]);
+            uvs.push_back(glm::vec2(couch_vertices[i][j].x / couch_vertices[i][j].z, couch_vertices[i][j].y / couch_vertices[i][j].z));
             
         }
         for (int k = 0; k < 22; k += 3) {
@@ -492,24 +644,28 @@ void InitLoadObjects() {
         uvs.clear();
     }
 
-    ////Test for new primitive window
-    //for (int i = 0; i < windowMeshesCount; i++) {
-    //    Mesh* m = new Mesh();
-    //    m->isPrimitive = true;
-    //    for (int j = 0; j < 8; j++) {
-    //        vertices.push_back(primitive_window[i][j]);
-    //        uvs.push_back(glm::vec2(primitive_window[i][j].x / primitive_window[i][j].z, primitive_window[i][j].y / primitive_window[i][j].z));
+    //Test for new primitive window
+    for (int l = 0; l < 3; l++) {
+        for (int i = 0; i < windowMeshCount; i++) {
+            Mesh* m = new Mesh();
+            m->isPrimitive = true;
+            for (int j = 0; j < 8; j++) {
+                vertices.push_back(windowMeshes[i][j]);
+                uvs.push_back(glm::vec2(windowMeshes[i][j].x / windowMeshes[i][j].z, windowMeshes[i][j].y / windowMeshes[i][j].z));
 
-    //    }
-    //    for (int k = 0; k < 22; k += 3) {
-    //        normals.push_back(glm::normalize(glm::cross(vertices[solid_cube_elements[k + 1]] - vertices[solid_cube_elements[k]], vertices[solid_cube_elements[k + 2]] - vertices[solid_cube_elements[k]])));
-    //    }
-    //    m->CreateMesh(vertices, normals, uvs);
-    //    meshes.push_back(m);
-    //    vertices.clear();
-    //    normals.clear();
-    //    uvs.clear();
-    //}
+            }
+            for (int k = 0; k < 22; k += 3) {
+                normals.push_back(glm::normalize(glm::cross(vertices[solid_cube_elements[k + 1]] - vertices[solid_cube_elements[k]], vertices[solid_cube_elements[k + 2]] - vertices[solid_cube_elements[k]])));
+            }
+            m->CreateMesh(vertices, normals, uvs);
+            m->texture_id = loadBMP(textures[21]);
+            meshes.push_back(m);
+            vertices.clear();
+            normals.clear();
+            uvs.clear();
+        }
+    }
+   
    
 }
 
@@ -542,19 +698,47 @@ void InitMatrices()
         if (meshes[i]->isPrimitive) {
             meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(-35.0, 3.0, -20.0));
             meshes[i]->model = glm::rotate(meshes[i]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
+            meshes[i]->material.specular = glm::vec3(0.0, 0.0, 0.0);
         }
        
      
 
     }
-    //primitiveMeshes[10]->model = glm::translate(glm::mat4(), glm::vec3(5.0, 5.0, 5.0));
+
+    for (int i = objectCount + couchMeshCount; i < (objectCount + couchMeshCount+ windowMeshCount); i++) {
+        meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(20.3, 4.4, -60.0));
+    }
+    for (int i = objectCount + couchMeshCount + windowMeshCount; i < (objectCount + couchMeshCount + 2*windowMeshCount); i++) {
+        meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(11.7, 4.4, -60.0));
+    }
+    for (int i = objectCount + couchMeshCount + 2*windowMeshCount; i < (objectCount + couchMeshCount + 3 * windowMeshCount); i++) {
+        meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(3.1, 4.4, -60.0));
+    }
+
     meshes[0]->model = glm::translate(glm::mat4(), glm::vec3(3.0, 1.0, 0.0));
     meshes[1]->model = glm::mat4();
-    meshes[2]->model = glm::translate(glm::mat4(), glm::vec3(-2.0, 1.0, 0.0));
+
+    //Small table corner
+    meshes[2]->model = glm::translate(glm::mat4(), glm::vec3(1.5, 1.85, -12.5));
+    meshes[2]->model = glm::rotate(meshes[2]->model, glm::radians(40.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[2]->model = glm::scale(meshes[2]->model, glm::vec3(1.8, 1.8, 1.8));
+    meshes[36]->model = glm::translate(meshes[36]->model, glm::vec3(3.0, 1.7, -15.0));
+    meshes[36]->model = glm::scale(meshes[36]->model, glm::vec3(1.3, 1.3, 1.3));
+
+    //Armchairs
+    meshes[37]->model = glm::translate(meshes[37]->model, glm::vec3(5.5, 1.25, -11.5));
+    meshes[37]->model = glm::scale(meshes[37]->model, glm::vec3(0.08, 0.08, 0.08));
+    meshes[37]->model = glm::rotate(meshes[37]->model, glm::radians(170.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[37]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[38]->model = glm::translate(meshes[38]->model, glm::vec3(-2.5, 1.25, -11.5));
+    meshes[38]->model = glm::scale(meshes[38]->model, glm::vec3(0.08, 0.08, 0.08));
+    meshes[38]->model = glm::rotate(meshes[38]->model, glm::radians(20.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[38]->material.specular = glm::vec3(0.0, 0.0, 0.0);
     //Floor
     meshes[3]->model = glm::translate(glm::mat4(), glm::vec3(-15.0, 1.0, -10.0));
     meshes[3]->model = glm::scale(meshes[3]->model, glm::vec3(80.0, 0.2, 30.0));
-    //Cushions
+    //Couch cushions
     meshes[4]->model = glm::translate(meshes[4]->model, glm::vec3(-42.0, 3.3, -20.5));
     meshes[4]->model = glm::rotate(meshes[4]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
     meshes[4]->model = glm::rotate(meshes[4]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
@@ -590,38 +774,153 @@ void InitMatrices()
     meshes[13]->model = glm::rotate(meshes[13]->model, glm::radians(-155.0f), glm::vec3(0.0, 1.0, 0.0));
     meshes[13]->model = glm::rotate(meshes[13]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
     meshes[13]->model = glm::scale(meshes[13]->model, glm::vec3(3.0, 3.0, 3.0));
-    //Round tables
+    //Round marble tables
     meshes[5]->model = glm::translate(meshes[5]->model, glm::vec3(-41.0, 1.15, -15.0));
     meshes[6]->model = glm::translate(meshes[6]->model, glm::vec3(-35.0, 1.15, -15.0));
     meshes[7]->model = glm::translate(meshes[7]->model, glm::vec3(-29.0, 1.15, -15.0));
     //Walls
     meshes[14]->model = glm::translate(meshes[14]->model, glm::vec3(-15.0, 0.0, -24.8));
-    meshes[14]->model = glm::scale(meshes[14]->model, glm::vec3(80.0, 15.0, 0.2));
+    meshes[14]->model = glm::scale(meshes[14]->model, glm::vec3(80.0, 20.0, 0.2));
     meshes[14]->material.specular = glm::vec3(0.0, 0.0, 0.0);
 
     meshes[15]->model = glm::translate(meshes[15]->model, glm::vec3(-8.0, 0.0, -23.15));
-    meshes[15]->model = glm::scale(meshes[15]->model, glm::vec3(66, 15.0, 3.3));
+    meshes[15]->model = glm::scale(meshes[15]->model, glm::vec3(66, 20.0, 3.3));
     meshes[15]->material.specular = glm::vec3(0.0, 0.0, 0.0);
 
     meshes[16]->model = glm::translate(meshes[16]->model, glm::vec3(-15.0, 0.0, 5.0));
-    meshes[16]->model = glm::scale(meshes[16]->model, glm::vec3(80.0, 15.0, 0.2));
+    meshes[16]->model = glm::scale(meshes[16]->model, glm::vec3(80.0, 20.0, 0.2));
     meshes[16]->material.specular = glm::vec3(0.0, 0.0, 0.0);
     //Ceiling
-    meshes[17]->model = glm::translate(meshes[17]->model, glm::vec3(-15.0, 15.0, -5.0));
+    meshes[17]->model = glm::translate(meshes[17]->model, glm::vec3(-15.0, 20.0, -5.0));
     meshes[17]->model = glm::rotate(meshes[17]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
     meshes[17]->model = glm::scale(meshes[17]->model, glm::vec3(40.0, 0.2, 80.0));
     meshes[17]->material.specular = glm::vec3(0.0, 0.0, 0.0);
 
-    //Lamp Rails
-    meshes[18]->model = glm::translate(meshes[18]->model, glm::vec3(-20.0, 13.0, -2.0));
+    //Lamp Rails right
+    meshes[18]->model = glm::translate(meshes[18]->model, glm::vec3(-20.0, 18.0, -2.0));
     meshes[18]->model = glm::rotate(meshes[18]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
     meshes[18]->model = glm::scale(meshes[18]->model, glm::vec3(0.8, 0.8, 0.8));
 
-    meshes[19]->model = glm::translate(meshes[19]->model, glm::vec3(-20, 13.0, -19.0));
-    meshes[19]->model = glm::rotate(meshes[19]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+    //Lamp rails left
+    meshes[19]->model = glm::translate(meshes[19]->model, glm::vec3(-22, 18.0, -16.5));
     meshes[19]->model = glm::scale(meshes[19]->model, glm::vec3(0.8, 0.8, 0.8));
+    meshes[19]->model = glm::rotate(meshes[19]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
 
 
+    //Window seating
+    meshes[20]->model = glm::translate(meshes[20]->model, glm::vec3(24.0, 1.0, -8.5));
+    meshes[20]->model = glm::scale(meshes[20]->model, glm::vec3(3.0, 3.7, 27.0));
+
+    meshes[21]->model = glm::translate(meshes[21]->model, glm::vec3(23.0, 4.5, -8.5));
+    meshes[21]->model = glm::scale(meshes[21]->model, glm::vec3(5.0, 0.3, 27.0));
+
+    //Walls between windows
+    meshes[22]->model = glm::translate(meshes[22]->model, glm::vec3(23.5, 4.5, -12.6));
+    meshes[22]->model = glm::scale(meshes[22]->model, glm::vec3(3.7, 15.5, 1.5));
+
+    meshes[23]->model = glm::translate(meshes[23]->model, glm::vec3(23.5, 4.5, -4.0));
+    meshes[23]->model = glm::scale(meshes[23]->model, glm::vec3(3.7, 15.5, 1.5));
+
+    meshes[24]->model = glm::translate(meshes[24]->model, glm::vec3(23.5, 4.5, -21.0));
+    meshes[24]->model = glm::scale(meshes[24]->model, glm::vec3(3.7, 15.5, 1.0));
+
+    meshes[25]->model = glm::translate(meshes[25]->model, glm::vec3(23.5, 4.5, 4.4));
+    meshes[25]->model = glm::scale(meshes[25]->model, glm::vec3(3.7, 15.5, 1.0));
+
+    //Window cushions
+    meshes[26]->model = glm::translate(meshes[26]->model, glm::vec3(23.9, 5.8, -19.8));
+    meshes[26]->model = glm::rotate(meshes[26]->model, glm::radians(50.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[26]->model = glm::scale(meshes[26]->model, glm::vec3(3.5, 3.5, 3.5));
+
+    meshes[27]->model = glm::translate(meshes[27]->model, glm::vec3(23.9, 5.8, -14.1));
+    meshes[27]->model = glm::rotate(meshes[27]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[27]->model = glm::scale(meshes[27]->model, glm::vec3(3.5, 3.5, 3.5));
+
+    meshes[28]->model = glm::translate(meshes[28]->model, glm::vec3(23.9, 5.8, -11.0));
+    meshes[28]->model = glm::rotate(meshes[28]->model, glm::radians(50.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[28]->model = glm::scale(meshes[28]->model, glm::vec3(3.5, 3.5, 3.5));
+
+    meshes[29]->model = glm::translate(meshes[29]->model, glm::vec3(23.9, 5.8, -5.2));
+    meshes[29]->model = glm::rotate(meshes[29]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[29]->model = glm::scale(meshes[29]->model, glm::vec3(3.5, 3.5, 3.5));
+
+    meshes[30]->model = glm::translate(meshes[30]->model, glm::vec3(23.9, 5.8, -2.4));
+    meshes[30]->model = glm::rotate(meshes[30]->model, glm::radians(50.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[30]->model = glm::scale(meshes[30]->model, glm::vec3(3.5, 3.5, 3.5));
+
+    meshes[31]->model = glm::translate(meshes[31]->model, glm::vec3(23.9, 5.8, 3.3));
+    meshes[31]->model = glm::rotate(meshes[31]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[31]->model = glm::scale(meshes[31]->model, glm::vec3(3.5, 3.5, 3.5));
+
+    //BookCase
+    meshes[32]->model = glm::translate(meshes[32]->model, glm::vec3(-20.0, 9.0, -16.0));
+    meshes[32]->model = glm::scale(meshes[32]->model, glm::vec3(1.0, 1.4, 1.0));
+
+    //Black round tables
+    meshes[33]->model = glm::translate(meshes[33]->model, glm::vec3(-40.0, 1.15, 2.5));
+    meshes[33]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[34]->model = glm::translate(meshes[34]->model, glm::vec3(-25.0, 1.15, 2.5));
+    meshes[34]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[35]->model = glm::translate(meshes[35]->model, glm::vec3(-2.0, 1.15, 2.5));
+    meshes[35]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    //Chairs at marble tables
+    meshes[39]->model = glm::translate(meshes[39]->model, glm::vec3(-41.0, 3.5, -11.0));
+    meshes[39]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[40]->model = glm::translate(meshes[40]->model, glm::vec3(-35.0, 3.5, -11.0));
+    meshes[40]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[41]->model = glm::translate(meshes[41]->model, glm::vec3(-29.0, 3.5, -11.0));
+    meshes[41]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    //Chairs at black tables
+    //table 1
+    meshes[42]->model = glm::translate(meshes[42]->model, glm::vec3(-40.0, 1.0, -2.0));
+    meshes[42]->model = glm::scale(meshes[42]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[42]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[43]->model = glm::translate(meshes[43]->model, glm::vec3(-44.5, 1.0, 2.5));
+    meshes[43]->model = glm::scale(meshes[43]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[43]->model = glm::rotate(meshes[43]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[43]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[44]->model = glm::translate(meshes[44]->model, glm::vec3(-35.5, 1.0, 2.5));
+    meshes[44]->model = glm::scale(meshes[44]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[44]->model = glm::rotate(meshes[44]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[44]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    //table 2
+    meshes[45]->model = glm::translate(meshes[45]->model, glm::vec3(-25.0, 1.0, -2.0));
+    meshes[45]->model = glm::scale(meshes[45]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[45]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[46]->model = glm::translate(meshes[46]->model, glm::vec3(-29.5, 1.0, 2.5));
+    meshes[46]->model = glm::scale(meshes[46]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[46]->model = glm::rotate(meshes[46]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[46]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[47]->model = glm::translate(meshes[47]->model, glm::vec3(-20.5, 1.0, 2.5));
+    meshes[47]->model = glm::scale(meshes[47]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[47]->model = glm::rotate(meshes[47]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[47]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    //table 3
+    meshes[48]->model = glm::translate(meshes[48]->model, glm::vec3(-2.0, 1.0, -2.0));
+    meshes[48]->model = glm::scale(meshes[48]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[48]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[49]->model = glm::translate(meshes[49]->model, glm::vec3(2.5, 1.0, 2.5));
+    meshes[49]->model = glm::scale(meshes[49]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[49]->model = glm::rotate(meshes[49]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[49]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+
+    meshes[50]->model = glm::translate(meshes[50]->model, glm::vec3(-6.5, 1.0, 2.5));
+    meshes[50]->model = glm::scale(meshes[50]->model, glm::vec3(0.04, 0.04, 0.04));
+    meshes[50]->model = glm::rotate(meshes[50]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+    meshes[50]->material.specular = glm::vec3(0.0, 0.0, 0.0);
     //Create model-view Matrix for every mesh
     for (int i = 0; i < meshes.size() ; i++) {
         meshes[i]->mv = cameras[activeCamera]->view * meshes[i]->model;
@@ -644,7 +943,7 @@ void InitBuffers()
     GLuint ibo_cube_elements;
     
     
-    for (int i = 0; i < objectCount + primitiveObjectCount; i++) {
+    for (int i = 0; i < meshes.size(); i++) {
 
         // vbo for uvs
         glGenBuffers(1, &vbo_uvs);
@@ -726,7 +1025,7 @@ void InitBuffers()
         program_id, "mat_specular");
     uniform_material_power = glGetUniformLocation(
         program_id, "mat_power");
-    uniform_isPrimitive = glGetUniformLocation(program_id, "isPrimitive");
+    uniform_hasTexture = glGetUniformLocation(program_id, "hasTexture");
     uniform_testColor = glGetUniformLocation(program_id, "testColor");
     
     //Fill uniform vars
