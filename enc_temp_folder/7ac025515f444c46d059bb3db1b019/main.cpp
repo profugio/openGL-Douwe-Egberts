@@ -714,7 +714,7 @@ void InitMatrices()
         if (meshes[i]->isPrimitive) {
             meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(-35.0, 3.0, -20.0));
             meshes[i]->model = glm::rotate(meshes[i]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-            meshes[i]->material.ambient_color = glm::vec3(0.25, 0.25, 0.15);
+            meshes[i]->material.ambient_color = glm::vec3(0.25, 0.25, 0.1);
             meshes[i]->material.diffuse_color += glm::vec3(0.1, 0.1, 0.1);
             meshes[i]->material.specular = glm::vec3(0.0, 0.0, 0.0);
         }

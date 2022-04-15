@@ -3,8 +3,8 @@
 // Uniform matrices
 uniform mat4 mv;            //x
 uniform mat4 projection;    //
-uniform vec3 light_pos;     //
-
+uniform int lightsCount;
+uniform vec3 light_pos[4];     //
 uniform bool isPrimitive;
 // Per-vertex inputs
 in vec3 position;           //
@@ -23,13 +23,13 @@ layout(location = 2) in vec2 uv;
 out VS_OUT
 {
    vec3 N;
-   vec3 L;
+   vec3 L[4];
    vec3 V;
 } vs_out;
 
 void main()
 {
-    if (!isPrimitive) {
+
         // Calculate view-space coordinate
         vec4 P = mv * vec4(pos, 1.0);
 
@@ -37,7 +37,13 @@ void main()
         vs_out.N = mat3(mv) * normal;
 
         // Calculate light vector
-        vs_out.L = light_pos - P.xyz;
+        for (int i = 0; i < 4; i++) {
+            vs_out.L[i] = light_pos[i] - P.xyz;
+        }
+        
+
+
+
 
         // Calculate view vector;
         vs_out.V = -P.xyz;
@@ -47,11 +53,8 @@ void main()
 
         //texture
         UV = uv;
-    }
-    else {
-        vec4 P = mv * vec4(pos, 1.0);
-        gl_Position = projection * P;
-    }
+    
+
  
 
 }
