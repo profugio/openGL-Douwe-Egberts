@@ -13,7 +13,6 @@
 #include "texture.h"
 #include "walkCamera.h"
 #include "droneCamera.h"
-//#include "mesh.h"
 #include "model.h"
 
 using namespace std;
@@ -49,9 +48,6 @@ bool keyBuffer[128];
 
 vector<Model*> models;
 vector<Mesh*> meshes;
-vector<Mesh*> primitiveMeshes;
-
-vector<Vertex> vertexList;
 
 //--------------------------------------------------------------------------------
 // Variables
@@ -59,10 +55,6 @@ vector<Vertex> vertexList;
 
 // ID's
 GLuint program_id;
-//GLuint vao[objectCount];
-
-//Moved to model class
-//GLuint texture_id[objectCount];
 
 // Uniform ID's
 GLuint uniform_mv;
@@ -365,21 +357,6 @@ vector<glm::vec3> windowMeshes[windowMeshCount] = {
      },
 };
 
-
-
-GLfloat primitive_colors[] = {
-    // front colors
-    1.0, 1.0, 0.0,
-    0.0, 1.0, 0.0,
-    0.0, 0.0, 1.0,
-    1.0, 1.0, 1.0,
-    // back colors
-    0.0, 1.0, 1.0,
-    1.0, 0.0, 1.0,
-    1.0, 0.0, 0.0,
-    1.0, 1.0, 0.0
-};
-
 GLushort solid_cube_elements[] = {
     0,1,2,0,2,3,// front
     1,5,6,1,6,2,//right side
@@ -389,22 +366,9 @@ GLushort solid_cube_elements[] = {
     3,2,6,3,6,7, //top
     0,3,1,2,5,6,4,7  // top to bottom
 };
-
-
-
-struct LightSource {
-    glm::vec3 position;
-};
-
-
-
-Material materials[objectCount];
 //LightSource light;
 const unsigned int lightCount = 4;
 glm::vec3 lights[lightCount];
-
-
-
 
 void InitCameras() {
     cameras[0] = new WalkCamera();
@@ -462,6 +426,9 @@ void doKeyboardInput(int key, int deltaTime) {
         (cameras[activeCamera])->Move(key, deltaTime);
     }
     else if (key == 27) {
+        for (int i = 0; i < models.size(); i++) {
+            delete models[i];
+        }
         glutExit();
     }
 }
@@ -477,13 +444,7 @@ void InitLight() {
     lights[1] = glm::vec3(-35.0, 10.0, -10.0);
     lights[2] = glm::vec3(3.0, 2.0, -2.0);
     lights[3] = glm::vec3(-35.0, 3.0, -20.0);
-    for (int i = 0; i < objectCount; i++) {
-       
-        materials[i].ambient_color = glm::vec3(0.2, 0.2, 0.1);
-        materials[i].diffuse_color = glm::vec3(0.5, 0.5, 0.3);
-        materials[i].specular = glm::vec3(0.7, 0.7, 0.7);
-        materials[i].power = 1024;
-    }
+
   
 }
 
@@ -507,7 +468,6 @@ void Render()
 
     // Attach to program_id
     glUseProgram(program_id);
-    glm::vec3 color;
 
     for (int i = 0; i < models.size(); i++) {
         if (!(models[i]->isRoof && activeCamera == DRONE_CAMERA)) {
@@ -596,10 +556,6 @@ void InitLoadObjects() {
             uvs.clear();
             bool res = loadOBJ(objects[i], vertices, uvs, normals);
         }
-
-        for (int j = 0; j < vertices.size(); j++) {
-            vertexList.push_back({vertices[j], normals[j], uvs[j]});
-        }
         model = new Model();
         Mesh* m = new Mesh();
         m->CreateMesh(vertices, normals, uvs);
@@ -617,16 +573,16 @@ void InitLoadObjects() {
         m->texture_id = id;
         model->meshes.push_back(m);
         models.push_back(model);       
-        vertexList.clear();
     }
  
     vertices.clear();
     normals.clear();
     uvs.clear();
    
+    //Add all couch models 
     for (int i = 0; i < 2; i++) {
         model = new Model();
-        //Add all couch meshes to meshList
+        
         for (int j = 0; j < couchMeshCount; j++) {
 
             Mesh* m = new Mesh();
@@ -658,7 +614,7 @@ void InitLoadObjects() {
     }
    
     
-    //Test for new primitive window
+    //Add all windows
     for (int l = 0; l < 3; l++) {
         model = new Model();
         for (int i = 0; i < windowMeshCount; i++) {

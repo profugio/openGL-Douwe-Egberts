@@ -31,10 +31,8 @@ public:
 	GLuint vao;
 	GLuint vbo;
 	Mesh();
-	Mesh(std::vector<Vertex>, Material, GLuint);
-	//Mesh(std::vector<Vertex>, GLuint); //Maybe give list of vertices, normal and uv. Define couch in txt or json file
 	void CreateMesh(std::vector<glm::vec3>, std::vector<glm::vec3>, std::vector<glm::vec2>);
-	void CreateMesh(std::vector<Vertex>, Material);
+
 
 };
 

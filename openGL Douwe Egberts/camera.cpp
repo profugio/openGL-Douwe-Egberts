@@ -3,10 +3,6 @@
 
 
 
-Camera::~Camera() {
-   
-}
-
 void Camera::CalculateCameraDirection()
 {
     cameraDirection.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));

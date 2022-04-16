@@ -20,8 +20,6 @@ public:
 	glm::mat4 view;
 	glm::mat4 projection;
 
-	//Camera();
-	~Camera();
 	void CalculateCameraDirection();
 	virtual void Move(int, int);
 private:

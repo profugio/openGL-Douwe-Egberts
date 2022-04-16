@@ -2,11 +2,6 @@
 #include "model.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-Model::Model()
-{
-	
-}
-
 void Model::Translate(glm::vec3 v)
 {
 	for (int i = 0; i < meshes.size(); i++) {
@@ -33,20 +28,6 @@ void Model::CreateModelViewMatrix(glm::mat4 view)
 	for (int i = 0; i < meshes.size(); i++) {
 		meshes[i]->mv = view * meshes[i]->model;
 	}
-}
-
-void Model::DrawModel(GLuint program_id, glm::mat4 projection)
-{
-	glUseProgram(program_id);
-	for (int i = 0; i < meshes.size(); i++) {
-		//glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(meshes[i]->mv));
-	}
-	
-}
-
-void Model::DrawModel(GLuint program_id, unsigned int size, glm::mat4 projection)
-{
-
 }
 
 void Model::SetAmbient(glm::vec3 ambient)

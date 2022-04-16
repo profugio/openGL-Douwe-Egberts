@@ -24,6 +24,7 @@ DroneCamera::DroneCamera()
 		1000.0f);	
 }
 
+//Change view matrix to make it appear as if you're walking/looking around
 void DroneCamera::Move(int key, int deltaTime) {
 	if (key == 119) { // w
 		cameraPos += cameraSpeed * deltaTime * cameraUp;

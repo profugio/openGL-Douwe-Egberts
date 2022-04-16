@@ -14,12 +14,15 @@ WalkCamera::WalkCamera() {
 	glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
 	cameraUp = glm::cross(cameraDirection, cameraRight);
 
+	//Create view and projection matrix
 	view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 	projection = glm::perspective(
 		glm::radians(45.0f),
 		1.0f * 800 / 600, 0.1f,
 		1000.0f);
 }
+
+//Change view matrix to make it appear as if you're walking/looking around
 void WalkCamera::Move(int key, int deltaTime) {
 	if (key == 119) { // w
 		cameraPos += cameraSpeed * deltaTime * glm::vec3(cameraFront.x, 0.0f, cameraFront.z);
