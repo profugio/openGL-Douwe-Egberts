@@ -13,7 +13,8 @@
 #include "texture.h"
 #include "walkCamera.h"
 #include "droneCamera.h"
-#include "mesh.h"
+//#include "mesh.h"
+#include "model.h"
 
 using namespace std;
 
@@ -23,7 +24,7 @@ using namespace std;
 //--------------------------------------------------------------------------------
 
 const int WIDTH = 800, HEIGHT = 600;
-const unsigned int objectCount = 51;
+const unsigned int objectCount = 58;
 
 const char* fragshader_name = "fragmentshader.fsh";
 const char* vertexshader_name = "vertexshader.vsh";
@@ -46,6 +47,7 @@ int activeCamera;
 bool keyBuffer[128];
 
 
+vector<Model*> models;
 vector<Mesh*> meshes;
 vector<Mesh*> primitiveMeshes;
 
@@ -499,58 +501,46 @@ void Render()
             doKeyboardInput(i, deltaTime);
         }
     }
-    //Change light to camera position
-    glUniform3fv(uniform_light_pos, 1, glm::value_ptr(cameras[activeCamera]->cameraPos));
+    //Animations
+    models[0]->Rotate(0.01f, glm::vec3(0.0, 1.0, 0.0));
 
 
     // Attach to program_id
     glUseProgram(program_id);
     glm::vec3 color;
 
-    for (int i = 0; i < meshes.size(); i++) {
-        meshes[i]->mv = cameras[activeCamera]->view * meshes[i]->model;
+    for (int i = 0; i < models.size(); i++) {
+        if (!(models[i]->isRoof && activeCamera == DRONE_CAMERA)) {
+            models[i]->CreateModelViewMatrix(cameras[activeCamera]->view);
 
-        // Send mv
-        glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(meshes[i]->mv));
+            for (int j = 0; j < models[i]->meshes.size(); j++) {
 
-        //Bind texture
-        //if (meshes[i]->texture_id != 0) {
-            glBindTexture(GL_TEXTURE_2D, meshes[i]->texture_id);
-            glUniform1i(uniform_hasTexture, true);
-        //}
-        //else {
-        //    glUniform1i(uniform_hasTexture, false);
-        //    color = glm::vec3(1.0, 0.0, 0.0);
-        //    glUniform3fv(uniform_testColor, 1, glm::value_ptr(color));
-        //}
-        
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                //Bind texture
+                glBindTexture(GL_TEXTURE_2D, models[i]->meshes[j]->texture_id);
+                glUniform1i(uniform_hasTexture, true);
 
-        //Fill uniform vars
-        glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
-        glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(meshes[i]->material.ambient_color));
-        glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(meshes[i]->material.diffuse_color));
-        glUniform3fv(uniform_specular, 1, glm::value_ptr(meshes[i]->material.specular));
-        glUniform1f(uniform_material_power, meshes[i]->material.power);
+                //Fill uniform vars
+                glUniformMatrix4fv(uniform_mv, 1, GL_FALSE, glm::value_ptr(models[i]->meshes[j]->mv));
+                glUniformMatrix4fv(uniform_proj, 1, GL_FALSE, glm::value_ptr(cameras[activeCamera]->projection));
+                glUniform3fv(uniform_material_ambient, 1, glm::value_ptr(models[i]->meshes[j]->material.ambient_color));
+                glUniform3fv(uniform_material_diffuse, 1, glm::value_ptr(models[i]->meshes[j]->material.diffuse_color));
+                glUniform3fv(uniform_specular, 1, glm::value_ptr(models[i]->meshes[j]->material.specular));
+                glUniform1f(uniform_material_power, models[i]->meshes[j]->material.power);
+                glBindVertexArray(models[i]->meshes[j]->vao);
+                //If mesh is primitive draw using elements, else simply draw triangles
+                if (models[i]->meshes[j]->isPrimitive) {
+                    glDrawElements(GL_TRIANGLES, sizeof(solid_cube_elements) / sizeof(GLushort),
+                        GL_UNSIGNED_SHORT, 0);
+                }
+                else {
+                    glDrawArrays(GL_TRIANGLES, 0, models[i]->meshes[j]->vertices.size());
+                }
 
-        
-        // Send vao
-        glBindVertexArray(meshes[i]->vao);
-
-        //If mesh is primitive draw using elements, else simply draw triangles
-        if (meshes[i]->isPrimitive) {
-            glDrawElements(GL_TRIANGLES, sizeof(solid_cube_elements) / sizeof(GLushort),
-                GL_UNSIGNED_SHORT, 0);
+                glBindVertexArray(0);
+            }
         }
-        else {
-            glDrawArrays(GL_TRIANGLES, 0, meshes[i]->vertices.size());
-        }
-        
-        glBindVertexArray(0);
+           
    }
-
-
-
     glutSwapBuffers();
 }
 
@@ -589,14 +579,15 @@ void InitGlutGlew(int argc, char** argv)
 
 void InitLoadObjects() {
     //Change these to some sort of dictionairy
-    const char* objects[objectCount] = { "Objects/teapot.obj", "Objects/cylinder18.obj", "Objects/smallTable.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/LampRailRight.obj", "Objects/LampRailLeft.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj", "Objects/bookCase.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/smallTable.obj", "Objects/armChair.obj", "Objects/armChair.obj", "Objects/chair2.obj", "Objects/chair2.obj" , "Objects/chair2.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj" };
-    const char* textures[objectCount] = { "Textures/uvtemplate.bmp", "Textures/Yellobrk.bmp","Textures/woodTexture.bmp", "Textures/woodFloor.bmp", "Textures/greyCushion.bmp", "Textures/roundTableMarble.bmp", "Textures/roundTableMarble.bmp", "Textures/roundTableMarble.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/ceiling.bmp", "Textures/lampRailTexture.bmp", "Textures/lampRailTexture.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/greyCushion.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp" , "Textures/redCloth.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp", "Textures/bookCaseTexture.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp" , "Textures/black_metal.bmp", "Textures/woodTexture.bmp", "Textures/armChair.bmp", "Textures/armChair.bmp" , "Textures/black_metal.bmp" , "Textures/black_metal.bmp" , "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp" };
+    const char* objects[objectCount] = { "Objects/teapot.obj", "Objects/cylinder18.obj", "Objects/smallTable.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/LampRailRight.obj", "Objects/LampRailLeft.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/box.obj", "Objects/cushion5.obj", "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj" , "Objects/cushion5.obj", "Objects/bookCase.obj", "Objects/roundTable.obj", "Objects/roundTable.obj" , "Objects/roundTable.obj", "Objects/smallTable.obj", "Objects/armChair.obj", "Objects/armChair.obj", "Objects/chair2.obj", "Objects/chair2.obj" , "Objects/chair2.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj", "Objects/chair1.obj" , "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj", "Objects/cushion5.obj"};
+    const char* textures[objectCount] = { "Textures/uvtemplate.bmp", "Textures/Yellobrk.bmp","Textures/woodTexture.bmp", "Textures/woodFloor.bmp", "Textures/greyCushion.bmp", "Textures/roundTableMarble.bmp", "Textures/roundTableMarble.bmp", "Textures/roundTableMarble.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/redCloth.bmp", "Textures/greyCushion.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/ceiling.bmp", "Textures/lampRailTexture.bmp", "Textures/lampRailTexture.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/whiteWall3.bmp", "Textures/greyCushion.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp" , "Textures/redCloth.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp", "Textures/bookCaseTexture.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp" , "Textures/black_metal.bmp", "Textures/woodTexture.bmp", "Textures/armChair.bmp", "Textures/armChair.bmp" , "Textures/black_metal.bmp" , "Textures/black_metal.bmp" , "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp", "Textures/black_metal.bmp" , "Textures/greyCushion.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp" , "Textures/redCloth.bmp" , "Textures/greyCushion.bmp" , "Textures/redCloth.bmp", "Textures/redCloth.bmp"};
    
     vector<glm::vec3> vertices{};
     vector<glm::vec3> normals{};
     vector<glm::vec2> uvs{};
     glm::vec3 color;
     GLuint id;
+    Model* model;
     //Add all imported objects to mesh list
     for (int i = 0; i < objectCount; i++) {
         if (i == 0 || (objects[i] != objects[i - 1])) {
@@ -609,6 +600,7 @@ void InitLoadObjects() {
         for (int j = 0; j < vertices.size(); j++) {
             vertexList.push_back({vertices[j], normals[j], uvs[j]});
         }
+        model = new Model();
         Mesh* m = new Mesh();
         m->CreateMesh(vertices, normals, uvs);
         if (i == 0 || (textures[i] != textures[i - 1])) {
@@ -617,51 +609,58 @@ void InitLoadObjects() {
         }
         else{
           
-            id = meshes[i-1]->texture_id;
+            id = models[models.size()-1]->meshes[0]->texture_id;
+        }
+        if (i == 17 || i == 18 || i == 19) {
+            model->isRoof = true;
         }
         m->texture_id = id;
-        meshes.push_back(m);
-       
+        model->meshes.push_back(m);
+        models.push_back(model);       
         vertexList.clear();
-
-
-       
-
-
     }
+ 
     vertices.clear();
     normals.clear();
     uvs.clear();
+   
+    for (int i = 0; i < 2; i++) {
+        model = new Model();
+        //Add all couch meshes to meshList
+        for (int j = 0; j < couchMeshCount; j++) {
 
-    //Add all primtive meshes to meshList
-    for (int i = 0; i < couchMeshCount; i++) {
-        Mesh* m = new Mesh();
-        m->isPrimitive = true;
-        for (int j = 0; j < 8; j++) {
-            vertices.push_back(couch_vertices[i][j]);
-            uvs.push_back(glm::vec2(couch_vertices[i][j].x / couch_vertices[i][j].z, couch_vertices[i][j].y / couch_vertices[i][j].z));
+            Mesh* m = new Mesh();
+            m->isPrimitive = true;
+            for (int k = 0; k < 8; k++) {
+                vertices.push_back(couch_vertices[j][k]);
+                uvs.push_back(glm::vec2(couch_vertices[j][k].x / couch_vertices[j][k].z, couch_vertices[j][k].y / couch_vertices[j][k].z));
+
+            }
+            for (int l = 0; l < 22; l += 3) {
+                normals.push_back(glm::normalize(glm::cross(vertices[solid_cube_elements[l + 1]] - vertices[solid_cube_elements[l]], vertices[solid_cube_elements[l + 2]] - vertices[solid_cube_elements[l]])));
+            }
+            m->CreateMesh(vertices, normals, uvs);
+
+            if (j >= couchMeshCount - 6) {
+                m->texture_id = loadBMP(textures[33]);
+            }
+            else {
+                m->texture_id = loadBMP(textures[4]);
+            }
             
-        }
-        for (int k = 0; k < 22; k += 3) {
-            normals.push_back(glm::normalize(glm::cross(vertices[solid_cube_elements[k + 1]] - vertices[solid_cube_elements[k]], vertices[solid_cube_elements[k + 2]] - vertices[solid_cube_elements[k]])));
-        }
-        m->CreateMesh(vertices, normals, uvs);
-        
-        if (i >= couchMeshCount - 6) {
-            m->texture_id = loadBMP(textures[33]);
-        }
-        else {
-            m->texture_id = loadBMP(textures[4]);
-        }
-        
-        meshes.push_back(m);
-        vertices.clear();
-        normals.clear();
-        uvs.clear();
-    }
+            model->meshes.push_back(m);
 
+            vertices.clear();
+            normals.clear();
+            uvs.clear();
+        }
+        models.push_back(model);
+    }
+   
+    
     //Test for new primitive window
     for (int l = 0; l < 3; l++) {
+        model = new Model();
         for (int i = 0; i < windowMeshCount; i++) {
             Mesh* m = new Mesh();
             m->isPrimitive = true;
@@ -675,13 +674,14 @@ void InitLoadObjects() {
             }
             m->CreateMesh(vertices, normals, uvs);
             m->texture_id = loadBMP(textures[21]);
-            meshes.push_back(m);
+            model->meshes.push_back(m);
             vertices.clear();
             normals.clear();
             uvs.clear();
         }
+        models.push_back(model);
     }
-   
+    
    
 }
 
@@ -709,248 +709,284 @@ void InitShaders()
 
 void InitMatrices()
 {
-    //Position all couch meshes correctly
-    for (int i = objectCount; i < objectCount + couchMeshCount; i++) {
-        if (meshes[i]->isPrimitive) {
-            meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(-35.0, 3.0, -20.0));
-            meshes[i]->model = glm::rotate(meshes[i]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-            meshes[i]->material.ambient_color = glm::vec3(0.25, 0.25, 0.15);
-            meshes[i]->material.diffuse_color += glm::vec3(0.1, 0.1, 0.1);
-            meshes[i]->material.specular = glm::vec3(0.0, 0.0, 0.0);
-        }
-       
-     
 
-    }
+    //Teapot
+    models[0]->Translate(glm::vec3(1.5, 4.20, -12.5));
+    models[0]->Scale(glm::vec3(0.8, 0.8, 0.8));
+    //Couches
+    models[58]->Translate(glm::vec3(-35.0, 3.0, -20.0));
+    models[58]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[58]->SetAmbient(glm::vec3(0.25, 0.25, 0.15));
+    models[58]->SetDiffuse(glm::vec3(0.6,0.6,0.4));
+    models[58]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    for (int i = objectCount + couchMeshCount; i < (objectCount + couchMeshCount+ windowMeshCount); i++) {
-        meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(25.2, 7.4, -17.0));
-        meshes[i]->model = glm::rotate(meshes[i]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-        
-    }
-    for (int i = objectCount + couchMeshCount + windowMeshCount; i < (objectCount + couchMeshCount + 2*windowMeshCount); i++) {
-        meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(25.2, 7.4, -8.3));
-        meshes[i]->model = glm::rotate(meshes[i]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-        
-    }
-    for (int i = objectCount + couchMeshCount + 2*windowMeshCount; i < (objectCount + couchMeshCount + 3 * windowMeshCount); i++) {
-        meshes[i]->model = glm::translate(meshes[i]->model, glm::vec3(25.2, 7.4, 0.3));
-        meshes[i]->model = glm::rotate(meshes[i]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-        
-    }
+    models[59]->Translate(glm::vec3(1.5, 3.0, -20.0));
+    models[59]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[59]->SetAmbient(glm::vec3(0.25, 0.25, 0.15));
+    models[59]->SetDiffuse(glm::vec3(0.6, 0.6, 0.4));
+    models[59]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[0]->model = glm::translate(glm::mat4(), glm::vec3(3.0, 1.0, 0.0));
-    meshes[1]->model = glm::mat4();
+    //Windows
+    models[60]->Translate(glm::vec3(25.2, 7.4, -17.0));
+    models[60]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+
+    models[61]->Translate(glm::vec3(25.2, 7.4, -8.3));
+    models[61]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+
+    models[62]->Translate(glm::vec3(25.2, 7.4, 0.3));
+    models[62]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+
+    //Cushions couch close to window
+    models[51]->Translate(glm::vec3(-5.5, 3.3, -20.5));
+    models[51]->Rotate(-50.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[51]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[51]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[52]->Translate(glm::vec3(-4.2, 3.3, -20.5));
+    models[52]->Rotate(-70.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[52]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[52]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[53]->Translate(glm::vec3(-3.0, 3.0, -20.3));
+    models[53]->Rotate(-70.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[53]->Rotate(70.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[53]->Rotate(-35.0f, glm::vec3(1.0, 0.0, 0.0));
+    models[53]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[54]->Translate(glm::vec3(1.0, 3.3, -20.5));
+    models[54]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[54]->Rotate(-3.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[54]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[55]->Translate(glm::vec3(2.5, 3.3, -20.5));
+    models[55]->Rotate(-100.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[55]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[55]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[56]->Translate(glm::vec3(7.2, 3.3, -20.5));
+    models[56]->Rotate(-135.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[56]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[56]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[57]->Translate(glm::vec3(8.6, 3.3, -20.2));
+    models[57]->Rotate(-155.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[57]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[57]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    //Cushions couch far from window
+    models[4]->Translate(glm::vec3(-42.0, 3.3, -20.5));
+    models[4]->Rotate(-50.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[4]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[4]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[8]->Translate(glm::vec3(-40.7, 3.3, -20.5));
+    models[8]->Rotate(-70.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[8]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[8]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[9]->Translate(glm::vec3(-39.5, 3.0, -20.3));
+    models[9]->Rotate(-70.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[9]->Rotate(70.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[9]->Rotate(-35.0f, glm::vec3(1.0, 0.0, 0.0));
+    models[9]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[10]->Translate(glm::vec3(-35.5, 3.3, -20.5));
+    models[10]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[10]->Rotate(-3.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[10]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[11]->Translate(glm::vec3(-34.0, 3.3, -20.5));
+    models[11]->Rotate(-100.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[11]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[11]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[12]->Translate(glm::vec3(-29.3, 3.3, -20.5));
+    models[12]->Rotate(-135.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[12]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[12]->Scale(glm::vec3(3.0, 3.0, 3.0));
+
+    models[13]->Translate(glm::vec3(-27.9, 3.3, -20.2));
+    models[13]->Rotate(-155.0f, glm::vec3(0.0, 1.0, 0.0));
+    models[13]->Rotate(20.0f, glm::vec3(0.0, 0.0, 1.0));
+    models[13]->Scale(glm::vec3(3.0, 3.0, 3.0));
 
     //Small table corner
-    meshes[2]->model = glm::translate(glm::mat4(), glm::vec3(1.5, 1.85, -12.5));
-    meshes[2]->model = glm::rotate(meshes[2]->model, glm::radians(40.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[2]->model = glm::scale(meshes[2]->model, glm::vec3(1.8, 1.8, 1.8));
-    meshes[36]->model = glm::translate(meshes[36]->model, glm::vec3(3.0, 1.7, -15.0));
-    meshes[36]->model = glm::scale(meshes[36]->model, glm::vec3(1.3, 1.3, 1.3));
+   models[2]->Translate(glm::vec3(1.5, 1.85, -12.5));
+   models[2]->Rotate(40.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[2]->Scale(glm::vec3(1.8, 1.8, 1.8));
+   models[36]->Translate(glm::vec3(3.0, 1.7, -15.0));
+   models[36]->Scale(glm::vec3(1.3, 1.3, 1.3));
 
-    //Armchairs
-    meshes[37]->model = glm::translate(meshes[37]->model, glm::vec3(5.5, 1.25, -11.5));
-    meshes[37]->model = glm::scale(meshes[37]->model, glm::vec3(0.08, 0.08, 0.08));
-    meshes[37]->model = glm::rotate(meshes[37]->model, glm::radians(170.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[37]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   //Armchairs
+   models[37]->Translate(glm::vec3(5.5, 1.25, -11.5));
+   models[37]->Scale(glm::vec3(0.08, 0.08, 0.08));
+   models[37]->Rotate(170.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[37]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[38]->model = glm::translate(meshes[38]->model, glm::vec3(-2.5, 1.25, -11.5));
-    meshes[38]->model = glm::scale(meshes[38]->model, glm::vec3(0.08, 0.08, 0.08));
-    meshes[38]->model = glm::rotate(meshes[38]->model, glm::radians(20.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[38]->material.specular = glm::vec3(0.0, 0.0, 0.0);
-    //Floor
-    meshes[3]->model = glm::translate(glm::mat4(), glm::vec3(-15.0, 1.0, -10.0));
-    meshes[3]->model = glm::scale(meshes[3]->model, glm::vec3(80.0, 0.2, 30.0));
-    //Couch cushions
-    meshes[4]->model = glm::translate(meshes[4]->model, glm::vec3(-42.0, 3.3, -20.5));
-    meshes[4]->model = glm::rotate(meshes[4]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[4]->model = glm::rotate(meshes[4]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[4]->model = glm::scale(meshes[4]->model, glm::vec3(3.0,3.0,3.0));
+   models[38]->Translate(glm::vec3(-2.5, 1.25, -11.5));
+   models[38]->Scale(glm::vec3(0.08, 0.08, 0.08));
+   models[38]->Rotate(20.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[38]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
+   //Floor
+   models[3]->Translate(glm::vec3(-15.0, 1.0, -10.0));
+   models[3]->Scale(glm::vec3(80.0, 0.2, 30.0));
+  
+   //Round marble tables
+   models[5]->Translate(glm::vec3(-41.0, 1.15, -15.0));
+   models[6]->Translate(glm::vec3(-35.0, 1.15, -15.0));
+   models[7]->Translate(glm::vec3(-29.0, 1.15, -15.0));
+   //Walls
+   models[14]->Translate(glm::vec3(-15.0, 0.0, -24.8));
+   models[14]->Scale(glm::vec3(80.0, 20.0, 0.2));
+   models[14]->SetDiffuse(glm::vec3(0.2, 0.2, 0.2));
+   models[14]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[8]->model = glm::translate(meshes[8]->model, glm::vec3(-40.7, 3.3, -20.5));
-    meshes[8]->model = glm::rotate(meshes[8]->model, glm::radians(-70.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[8]->model = glm::rotate(meshes[8]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[8]->model = glm::scale(meshes[8]->model, glm::vec3(3.0, 3.0, 3.0));
+   models[15]->Translate(glm::vec3(-8.0, 0.0, -23.15));
+   models[15]->Scale(glm::vec3(66, 20.0, 3.3));
+   models[15]->SetDiffuse(glm::vec3(0.2, 0.2, 0.2));
+   models[15]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[9]->model = glm::translate(meshes[9]->model, glm::vec3(-39.5, 3.0, -20.3));
-    meshes[9]->model = glm::rotate(meshes[9]->model, glm::radians(-70.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[9]->model = glm::rotate(meshes[9]->model, glm::radians(70.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[9]->model = glm::rotate(meshes[9]->model, glm::radians(-35.0f), glm::vec3(1.0, 0.0, 0.0));
-    meshes[9]->model = glm::scale(meshes[9]->model, glm::vec3(3.0, 3.0, 3.0));
+   models[16]->Translate(glm::vec3(-15.0, 0.0, 5.0));
+   models[16]->Scale(glm::vec3(80.0, 20.0, 0.2));
+   models[16]->SetDiffuse(glm::vec3(0.2, 0.2, 0.2));
+   models[16]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
+   //Ceiling
+   models[17]->Translate(glm::vec3(-15.0, 20.0, -5.0));
+   models[17]->Rotate(90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[17]->Scale(glm::vec3(40.0, 0.2, 80.0));
+   models[17]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[10]->model = glm::translate(meshes[10]->model, glm::vec3(-35.5, 3.3, -20.5));
-    meshes[10]->model = glm::rotate(meshes[10]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[10]->model = glm::rotate(meshes[10]->model, glm::radians(-3.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[10]->model = glm::scale(meshes[10]->model, glm::vec3(3.0, 3.0, 3.0));
+   //Lamp Rails right
+   models[18]->Translate(glm::vec3(-20.0, 18.0, -2.0));
+   models[18]->Rotate(90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[18]->Scale(glm::vec3(0.8, 0.8, 0.8));
 
-    meshes[11]->model = glm::translate(meshes[11]->model, glm::vec3(-34.0, 3.3, -20.5));
-    meshes[11]->model = glm::rotate(meshes[11]->model, glm::radians(-100.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[11]->model = glm::rotate(meshes[11]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[11]->model = glm::scale(meshes[11]->model, glm::vec3(3.0, 3.0, 3.0));
-
-    meshes[12]->model = glm::translate(meshes[12]->model, glm::vec3(-29.3, 3.3, -20.5));
-    meshes[12]->model = glm::rotate(meshes[12]->model, glm::radians(-135.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[12]->model = glm::rotate(meshes[12]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[12]->model = glm::scale(meshes[12]->model, glm::vec3(3.0, 3.0, 3.0));
-
-    meshes[13]->model = glm::translate(meshes[13]->model, glm::vec3(-27.9, 3.3, -20.2));
-    meshes[13]->model = glm::rotate(meshes[13]->model, glm::radians(-155.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[13]->model = glm::rotate(meshes[13]->model, glm::radians(20.0f), glm::vec3(0.0, 0.0, 1.0));
-    meshes[13]->model = glm::scale(meshes[13]->model, glm::vec3(3.0, 3.0, 3.0));
-    //Round marble tables
-    meshes[5]->model = glm::translate(meshes[5]->model, glm::vec3(-41.0, 1.15, -15.0));
-    meshes[6]->model = glm::translate(meshes[6]->model, glm::vec3(-35.0, 1.15, -15.0));
-    meshes[7]->model = glm::translate(meshes[7]->model, glm::vec3(-29.0, 1.15, -15.0));
-    //Walls
-    meshes[14]->model = glm::translate(meshes[14]->model, glm::vec3(-15.0, 0.0, -24.8));
-    meshes[14]->model = glm::scale(meshes[14]->model, glm::vec3(80.0, 20.0, 0.2));
-    meshes[14]->material.diffuse_color = glm::vec3(0.2, 0.2, 0.2);
-    meshes[14]->material.specular = glm::vec3(0.0, 0.0, 0.0);
-
-    meshes[15]->model = glm::translate(meshes[15]->model, glm::vec3(-8.0, 0.0, -23.15));
-    meshes[15]->model = glm::scale(meshes[15]->model, glm::vec3(66, 20.0, 3.3));
-    meshes[15]->material.diffuse_color = glm::vec3(0.2, 0.2, 0.2);
-    meshes[15]->material.specular = glm::vec3(0.0, 0.0, 0.0);
-
-    meshes[16]->model = glm::translate(meshes[16]->model, glm::vec3(-15.0, 0.0, 5.0));
-    meshes[16]->model = glm::scale(meshes[16]->model, glm::vec3(80.0, 20.0, 0.2));
-    meshes[16]->material.diffuse_color = glm::vec3(0.2, 0.2, 0.2);
-    meshes[16]->material.specular = glm::vec3(0.0, 0.0, 0.0);
-    //Ceiling
-    meshes[17]->model = glm::translate(meshes[17]->model, glm::vec3(-15.0, 20.0, -5.0));
-    meshes[17]->model = glm::rotate(meshes[17]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[17]->model = glm::scale(meshes[17]->model, glm::vec3(40.0, 0.2, 80.0));
-    meshes[17]->material.specular = glm::vec3(0.0, 0.0, 0.0);
-
-    //Lamp Rails right
-    meshes[18]->model = glm::translate(meshes[18]->model, glm::vec3(-20.0, 18.0, -2.0));
-    meshes[18]->model = glm::rotate(meshes[18]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[18]->model = glm::scale(meshes[18]->model, glm::vec3(0.8, 0.8, 0.8));
-
-    //Lamp rails left
-    meshes[19]->model = glm::translate(meshes[19]->model, glm::vec3(-23, 18.0, -16.5));
-    meshes[19]->model = glm::scale(meshes[19]->model, glm::vec3(0.8, 0.8, 0.8));
-    meshes[19]->model = glm::rotate(meshes[19]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
+   //Lamp rails left
+   models[19]->Translate(glm::vec3(-23, 18.0, -16.5));
+   models[19]->Scale(glm::vec3(0.8, 0.8, 0.8));
+   models[19]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
 
 
-    //Window seating
-    meshes[20]->model = glm::translate(meshes[20]->model, glm::vec3(24.0, 1.0, -8.5));
-    meshes[20]->model = glm::scale(meshes[20]->model, glm::vec3(3.0, 3.7, 27.0));
+   //Window seating
+   models[20]->Translate(glm::vec3(24.0, 1.0, -8.5));
+   models[20]->Scale(glm::vec3(3.0, 3.7, 27.0));
 
-    meshes[21]->model = glm::translate(meshes[21]->model, glm::vec3(23.0, 4.5, -8.5));
-    meshes[21]->model = glm::scale(meshes[21]->model, glm::vec3(5.0, 0.3, 27.0));
+   models[21]->Translate( glm::vec3(23.0, 4.5, -8.5));
+   models[21]->Scale(glm::vec3(5.0, 0.3, 27.0));
 
-    //Walls between windows
-    meshes[22]->model = glm::translate(meshes[22]->model, glm::vec3(23.5, 4.5, -12.6));
-    meshes[22]->model = glm::scale(meshes[22]->model, glm::vec3(3.7, 15.5, 1.5));
+   //Walls between windows
+   models[22]->Translate(glm::vec3(23.5, 4.5, -12.6));
+   models[22]->Scale(glm::vec3(3.7, 15.5, 1.5));
 
-    meshes[23]->model = glm::translate(meshes[23]->model, glm::vec3(23.5, 4.5, -4.0));
-    meshes[23]->model = glm::scale(meshes[23]->model, glm::vec3(3.7, 15.5, 1.5));
+   models[23]->Translate(glm::vec3(23.5, 4.5, -4.0));
+   models[23]->Scale(glm::vec3(3.7, 15.5, 1.5));
 
-    meshes[24]->model = glm::translate(meshes[24]->model, glm::vec3(23.5, 4.5, -21.0));
-    meshes[24]->model = glm::scale(meshes[24]->model, glm::vec3(3.7, 15.5, 1.0));
+   models[24]->Translate(glm::vec3(23.5, 4.5, -21.0));
+   models[24]->Scale(glm::vec3(3.7, 15.5, 1.0));
 
-    meshes[25]->model = glm::translate(meshes[25]->model, glm::vec3(23.5, 4.5, 4.4));
-    meshes[25]->model = glm::scale(meshes[25]->model, glm::vec3(3.7, 15.5, 1.0));
+   models[25]->Translate(glm::vec3(23.5, 4.5, 4.4));
+   models[25]->Scale(glm::vec3(3.7, 15.5, 1.0));
 
-    //Window cushions
-    meshes[26]->model = glm::translate(meshes[26]->model, glm::vec3(23.9, 5.8, -19.8));
-    meshes[26]->model = glm::rotate(meshes[26]->model, glm::radians(50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[26]->model = glm::scale(meshes[26]->model, glm::vec3(3.5, 3.5, 3.5));
+   //Window cushions
+   models[26]->Translate(glm::vec3(23.9, 5.8, -19.8));
+   models[26]->Rotate(50.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[26]->Scale(glm::vec3(3.5, 3.5, 3.5));
 
-    meshes[27]->model = glm::translate(meshes[27]->model, glm::vec3(23.9, 5.8, -14.1));
-    meshes[27]->model = glm::rotate(meshes[27]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[27]->model = glm::scale(meshes[27]->model, glm::vec3(3.5, 3.5, 3.5));
+   models[27]->Translate(glm::vec3(23.9, 5.8, -14.1));
+   models[27]->Rotate(-50.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[27]->Scale(glm::vec3(3.5, 3.5, 3.5));
 
-    meshes[28]->model = glm::translate(meshes[28]->model, glm::vec3(23.9, 5.8, -11.0));
-    meshes[28]->model = glm::rotate(meshes[28]->model, glm::radians(50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[28]->model = glm::scale(meshes[28]->model, glm::vec3(3.5, 3.5, 3.5));
+   models[28]->Translate(glm::vec3(23.9, 5.8, -11.0));
+   models[28]->Rotate(50.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[28]->Scale(glm::vec3(3.5, 3.5, 3.5));
 
-    meshes[29]->model = glm::translate(meshes[29]->model, glm::vec3(23.9, 5.8, -5.2));
-    meshes[29]->model = glm::rotate(meshes[29]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[29]->model = glm::scale(meshes[29]->model, glm::vec3(3.5, 3.5, 3.5));
+   models[29]->Translate(glm::vec3(23.9, 5.8, -5.2));
+   models[29]->Rotate(-50.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[29]->Scale(glm::vec3(3.5, 3.5, 3.5));
 
-    meshes[30]->model = glm::translate(meshes[30]->model, glm::vec3(23.9, 5.8, -2.4));
-    meshes[30]->model = glm::rotate(meshes[30]->model, glm::radians(50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[30]->model = glm::scale(meshes[30]->model, glm::vec3(3.5, 3.5, 3.5));
+   models[30]->Translate(glm::vec3(23.9, 5.8, -2.4));
+   models[30]->Rotate(50.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[30]->Scale(glm::vec3(3.5, 3.5, 3.5));
 
-    meshes[31]->model = glm::translate(meshes[31]->model, glm::vec3(23.9, 5.8, 3.3));
-    meshes[31]->model = glm::rotate(meshes[31]->model, glm::radians(-50.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[31]->model = glm::scale(meshes[31]->model, glm::vec3(3.5, 3.5, 3.5));
+   models[31]->Translate(glm::vec3(23.9, 5.8, 3.3));
+   models[31]->Rotate(-50.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[31]->Scale(glm::vec3(3.5, 3.5, 3.5));
 
-    //BookCase
-    meshes[32]->model = glm::translate(meshes[32]->model, glm::vec3(-20.0, 10.0, -16.0));
-    meshes[32]->model = glm::scale(meshes[32]->model, glm::vec3(1.0, 1.4, 1.0));
+   //BookCase
+   models[32]->Translate(glm::vec3(-20.0, 10.0, -16.0));
+   models[32]->Scale(glm::vec3(1.0, 1.4, 1.0));
 
-    //Black round tables
-    meshes[33]->model = glm::translate(meshes[33]->model, glm::vec3(-40.0, 1.15, 2.5));
-    meshes[33]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   //Black round tables
+   models[33]->Translate(glm::vec3(-40.0, 1.15, 2.5));
+   models[33]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[34]->model = glm::translate(meshes[34]->model, glm::vec3(-25.0, 1.15, 2.5));
-    meshes[34]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[34]->Translate(glm::vec3(-25.0, 1.15, 2.5));
+   models[34]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[35]->model = glm::translate(meshes[35]->model, glm::vec3(-2.0, 1.15, 2.5));
-    meshes[35]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[35]->Translate(glm::vec3(-2.0, 1.15, 2.5));
+   models[35]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    //Chairs at marble tables
-    meshes[39]->model = glm::translate(meshes[39]->model, glm::vec3(-41.0, 3.5, -11.0));
-    meshes[39]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   //Chairs at marble tables
+   models[39]->Translate(glm::vec3(-41.0, 3.5, -11.0));
+   models[39]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[40]->model = glm::translate(meshes[40]->model, glm::vec3(-35.0, 3.5, -11.0));
-    meshes[40]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[40]->Translate(glm::vec3(-35.0, 3.5, -11.0));
+   models[40]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[41]->model = glm::translate(meshes[41]->model, glm::vec3(-29.0, 3.5, -11.0));
-    meshes[41]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[41]->Translate(glm::vec3(-29.0, 3.5, -11.0));
+   models[41]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    //Chairs at black tables
-    //table 1
-    meshes[42]->model = glm::translate(meshes[42]->model, glm::vec3(-40.0, 1.0, -2.0));
-    meshes[42]->model = glm::scale(meshes[42]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[42]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   //Chairs at black tables
+   //table 1
+   models[42]->Translate(glm::vec3(-40.0, 1.0, -2.0));
+   models[42]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[42]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[43]->model = glm::translate(meshes[43]->model, glm::vec3(-44.5, 1.0, 2.5));
-    meshes[43]->model = glm::scale(meshes[43]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[43]->model = glm::rotate(meshes[43]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[43]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[43]->Translate(glm::vec3(-44.5, 1.0, 2.5));
+   models[43]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[43]->Rotate(90.0, glm::vec3(0.0, 1.0, 0.0));
+   models[43]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[44]->model = glm::translate(meshes[44]->model, glm::vec3(-35.5, 1.0, 2.5));
-    meshes[44]->model = glm::scale(meshes[44]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[44]->model = glm::rotate(meshes[44]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[44]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[44]->Translate(glm::vec3(-35.5, 1.0, 2.5));
+   models[44]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[44]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[44]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    //table 2
-    meshes[45]->model = glm::translate(meshes[45]->model, glm::vec3(-25.0, 1.0, -2.0));
-    meshes[45]->model = glm::scale(meshes[45]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[45]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   //table 2
+   models[45]->Translate(glm::vec3(-25.0, 1.0, -2.0));
+   models[45]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[45]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[46]->model = glm::translate(meshes[46]->model, glm::vec3(-29.5, 1.0, 2.5));
-    meshes[46]->model = glm::scale(meshes[46]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[46]->model = glm::rotate(meshes[46]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[46]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[46]->Translate(glm::vec3(-29.5, 1.0, 2.5));
+   models[46]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[46]->Rotate(90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[46]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[47]->model = glm::translate(meshes[47]->model, glm::vec3(-20.5, 1.0, 2.5));
-    meshes[47]->model = glm::scale(meshes[47]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[47]->model = glm::rotate(meshes[47]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[47]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[47]->Translate(glm::vec3(-20.5, 1.0, 2.5));
+   models[47]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[47]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[47]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    //table 3
-    meshes[48]->model = glm::translate(meshes[48]->model, glm::vec3(-2.0, 1.0, -2.0));
-    meshes[48]->model = glm::scale(meshes[48]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[48]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   //table 3
+   models[48]->Translate(glm::vec3(-2.0, 1.0, -2.0));
+   models[48]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[48]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[49]->model = glm::translate(meshes[49]->model, glm::vec3(2.5, 1.0, 2.5));
-    meshes[49]->model = glm::scale(meshes[49]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[49]->model = glm::rotate(meshes[49]->model, glm::radians(-90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[49]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[49]->Translate( glm::vec3(2.5, 1.0, 2.5));
+   models[49]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[49]->Rotate(-90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[49]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
 
-    meshes[50]->model = glm::translate(meshes[50]->model, glm::vec3(-6.5, 1.0, 2.5));
-    meshes[50]->model = glm::scale(meshes[50]->model, glm::vec3(0.04, 0.04, 0.04));
-    meshes[50]->model = glm::rotate(meshes[50]->model, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
-    meshes[50]->material.specular = glm::vec3(0.0, 0.0, 0.0);
+   models[50]->Translate(glm::vec3(-6.5, 1.0, 2.5));
+   models[50]->Scale(glm::vec3(0.04, 0.04, 0.04));
+   models[50]->Rotate(90.0f, glm::vec3(0.0, 1.0, 0.0));
+   models[50]->SetSpecular(glm::vec3(0.0, 0.0, 0.0));
+    
+   
     //Create model-view Matrix for every mesh
-    for (int i = 0; i < meshes.size() ; i++) {
-        meshes[i]->mv = cameras[activeCamera]->view * meshes[i]->model;
+    for (int i = 0; i < models.size() ; i++) {
+        models[i]->CreateModelViewMatrix(cameras[activeCamera]->view);
+        //meshes[i]->mv = cameras[activeCamera]->view * meshes[i]->model;
     }
 }
 
@@ -970,72 +1006,74 @@ void InitBuffers()
     GLuint ibo_cube_elements;
     
     
-    for (int i = 0; i < meshes.size(); i++) {
+    for (int i = 0; i < models.size(); i++) {
+        for (int j = 0; j < models[i]->meshes.size(); j++) {
+            // vbo for uvs
+            glGenBuffers(1, &vbo_uvs);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo_uvs);
+            glBufferData(GL_ARRAY_BUFFER, models[i]->meshes[j]->uvs.size() * sizeof(glm::vec2),
+                &models[i]->meshes[j]->uvs[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        // vbo for uvs
-        glGenBuffers(1, &vbo_uvs);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_uvs);
-        glBufferData(GL_ARRAY_BUFFER, meshes[i]->uvs.size() * sizeof(glm::vec2),
-            &meshes[i]->uvs[0], GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+            // vbo for vertices
+            glGenBuffers(1, &vbo_vertices);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+            glBufferData(GL_ARRAY_BUFFER,
+                models[i]->meshes[j]->vertices.size() * sizeof(glm::vec3), &models[i]->meshes[j]->vertices[0],
+                GL_STATIC_DRAW);
 
-        // vbo for vertices
-        glGenBuffers(1, &vbo_vertices);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-        glBufferData(GL_ARRAY_BUFFER,
-            meshes[i]->vertices.size() * sizeof(glm::vec3), &meshes[i]->vertices[0],
-            GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+            // vbo for normals
+            glGenBuffers(1, &vbo_normals);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo_normals);
+            glBufferData(GL_ARRAY_BUFFER,
+                models[i]->meshes[j]->normals.size() * sizeof(glm::vec3),
+                &models[i]->meshes[j]->normals[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-        // vbo for normals
-        glGenBuffers(1, &vbo_normals);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_normals);
-        glBufferData(GL_ARRAY_BUFFER,
-            meshes[i]->normals.size() * sizeof(glm::vec3),
-            &meshes[i]->normals[0], GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+            // Allocate memory for vao
+            glGenVertexArrays(1, &models[i]->meshes[j]->vao);
 
-        // Allocate memory for vao
-        glGenVertexArrays(1, &meshes[i]->vao);
-
-        // Bind to vao
-        glBindVertexArray(meshes[i]->vao);
+            // Bind to vao
+            glBindVertexArray(models[i]->meshes[j]->vao);
 
 
-        //If mesh is a primitive create and bind vbo for indices
-        if (meshes[i]->isPrimitive) {
-            glGenBuffers(1, &ibo_cube_elements);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
-            glBufferData(
-                GL_ELEMENT_ARRAY_BUFFER, sizeof(solid_cube_elements),
-                solid_cube_elements, GL_STATIC_DRAW);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+            //If mesh is a primitive create and bind vbo for indices
+            if (models[i]->meshes[j]->isPrimitive) {
+                glGenBuffers(1, &ibo_cube_elements);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+                glBufferData(
+                    GL_ELEMENT_ARRAY_BUFFER, sizeof(solid_cube_elements),
+                    solid_cube_elements, GL_STATIC_DRAW);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube_elements);
+            }
+
+
+            // Bind vertices to vao
+            glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+            glEnableVertexAttribArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            // Bind normals to vao
+            glBindBuffer(GL_ARRAY_BUFFER, vbo_normals);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), 0);
+            glEnableVertexAttribArray(1);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            // Bind to vao
+            glBindBuffer(GL_ARRAY_BUFFER, vbo_uvs);
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
+            glEnableVertexAttribArray(2);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            // Stop bind to vao
+            glBindVertexArray(0);
         }
-       
 
-        // Bind vertices to vao
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        // Bind normals to vao
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_normals);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float),0);
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        // Bind to vao
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_uvs);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), 0);
-        glEnableVertexAttribArray(2);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        // Stop bind to vao
-        glBindVertexArray(0);
     }
 
     glUseProgram(program_id);

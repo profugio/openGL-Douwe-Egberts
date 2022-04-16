@@ -6,7 +6,7 @@ WalkCamera::WalkCamera() {
 	pitch = 0.0f;
 	cameraSpeed = 0.02f;
 
-	cameraPos = glm::vec3(0.0f, 2.0f, 3.0f);
+	cameraPos = glm::vec3(0.0f, 7.0f, 3.0f);
 	cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 	CalculateCameraDirection();
 
@@ -26,7 +26,7 @@ void WalkCamera::Move(int key, int deltaTime) {
 	}else if (key == 115) { //s
 		cameraPos -= cameraSpeed * deltaTime * glm::vec3(cameraFront.x, 0.0f, cameraFront.z);
 	}else if (key == 105) {  //i
-		if (pitch < 90) {
+		if (pitch < 89) {
 			pitch += 0.1f * deltaTime;
 			CalculateCameraDirection();
 		}
@@ -34,21 +34,14 @@ void WalkCamera::Move(int key, int deltaTime) {
 		yaw -= 0.1f * deltaTime;
 		CalculateCameraDirection();
 	}else if (key == 107) { //k
-		if (pitch > -90) {
+		if (pitch > -91) {
 			pitch -= 0.1f * deltaTime;
 			CalculateCameraDirection();
 		}
 	}else if (key == 108) { //l
 		yaw += 0.1f * deltaTime;
 		CalculateCameraDirection();
-	}//Only for testing
-	else if (key == 'q') {
-		cameraPos -= cameraSpeed * deltaTime * cameraUp;
 	}
-	else if (key == 'e'){
-		cameraPos += cameraSpeed * deltaTime * cameraUp;
-	}
-	//End testing
 	else {
 		Camera::Move(key, deltaTime);
 	}
